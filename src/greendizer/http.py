@@ -29,7 +29,7 @@ class ApiException(Exception):
         Gets the error code
         @return: int
         '''
-        return self.__response
+        return self.__response.status_code
 
 
     def __str__(self):
@@ -37,10 +37,7 @@ class ApiException(Exception):
         Returns a string representation of the exception
         @return: str
         '''
-        try:
-            return simplejson.loads(self.__response.get_data())["description"]
-        except:
-            return "Unknown"
+        return self.__response.data
 
 
 
@@ -277,6 +274,24 @@ class Etag(object):
         '''
         self.__last_modified = last_modified
         self.__id = identifier
+
+
+    @property
+    def last_modified(self):
+        '''
+        Gets the date on which the resource was last modified.
+        @return: datetime
+        '''
+        return self.__last_modified
+
+
+    @property
+    def id(self):
+        '''
+        Gets the ID of the resource.
+        @return: str
+        '''
+        return self.__id
 
 
     def __str__(self):

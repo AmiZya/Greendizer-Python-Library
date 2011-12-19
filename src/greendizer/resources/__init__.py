@@ -1,0 +1,697 @@
+import hashlib
+from datetime import datetime
+from greendizer.dal import Resource, Node
+
+
+
+
+class User(Resource):
+    '''
+    Represents a generic user on Greendizer.
+    '''
+    def __init__(self, **kwargs):
+        '''
+        Initializes a new instance of the User class.
+        '''
+        super(Resource, self).__init__(**kwargs)
+        self.__company = Employer(self)
+        self.__settings = Settings(self)
+        self.__emailNode = Node(kwargs["client"],
+                                uri=self.get_uri() + "emails/",
+                                resource_type=None)
+
+    @property
+    def emails(self):
+        '''
+        Gets access to the email addresses attached to this user.
+        @return: Node
+        '''
+        return self.__emailNode
+
+
+    @property
+    def settings(self):
+        '''
+        Gets the settings of this user.
+        @return: Settings
+        '''
+        return self.__settings
+
+
+    @property
+    def company(self):
+        '''
+        Gets the company of this user.
+        @return: Company
+        '''
+        self.__company
+
+
+    @property
+    def first_name(self):
+        '''
+        Gets the first name.
+        @return: str
+        '''
+        return self._get_attribute("firstname")
+
+
+    @property
+    def last_name(self):
+        '''
+        Gets the last name
+        @return: str
+        '''
+        return self._get_attribute("lastname")
+
+
+    @property
+    def full_name(self):
+        '''
+        Gets the last name
+        @return: str
+        '''
+        return "%s %s" % (self.get_firstname(), self.get_lastname())
+
+
+    @property
+    def avatar_url(self):
+        '''
+        Gets the URL of the user's profile picture
+        @return: str
+        '''
+        return self._get_attribute_value("avatar")
+
+
+    @property
+    def birthday(self):
+        '''
+        Gets the birthday
+        @return: date
+        '''
+        try:
+            return self._get_date_attribute("birthday").date
+        except:
+            pass
+
+
+
+
+class Settings(Resource):
+    '''
+    Represents generic settings attached a user's account.
+    '''
+    def __init__(self, user):
+        '''
+        Initializes a new instance of the Settings class.
+        @param client:Client Current client instance.
+        '''
+        super(Resource, self).__init__(user.get_client())
+
+
+    @property
+    def uri(self):
+        '''
+        Gets the URI of the resource.
+        @return:str
+        '''
+        return self.__user.get_uri() + "settings/"
+
+
+    @property
+    def language(self):
+        '''
+        Gets the language of the user.
+        @return: str
+        '''
+        return self._get_attribute("language")
+
+
+    @property
+    def region(self):
+        '''
+        Gets the region of the user
+        @return: str
+        '''
+        return self._get_attribute("region")
+
+
+    @property
+    def currency(self):
+        '''
+        Gets the currency
+        @return: str
+        '''
+        return self._get_attribute("currency")
+
+
+
+
+class Company(Resource):
+    '''
+    Represents a generic company's profile on Greendizer.
+    '''
+    @property
+    def uri(self):
+        '''
+        Gets the URI of the resource.
+        @return: str
+        '''
+        return "/companies/%s/" + self.id
+
+
+    @property
+    def name(self):
+        '''
+        Gets the name of the company
+        @return: str
+        '''
+        return self._get_attribute("name")
+
+
+    @property
+    def description(self):
+        '''
+        Gets the description of the company
+        @return: str
+        '''
+        return self._get_attribute("description")
+
+
+    @property
+    def small_logo_url(self):
+        '''
+        Gets the URL of a small version of the company's logo.
+        @return: str
+        '''
+        return self._get_attribute("smallLogo")
+
+
+    @property
+    def large_logo_url(self):
+        '''
+        Gets the URL of a large version of the company's logo.
+        @return: str
+        '''
+        return self._get_attribute("largeLogo")
+
+
+
+class Employer(Company):
+    '''
+    Represents an employer on Greendizer
+    '''
+    def __init__(self, user):
+        '''
+        Initializes a new instance of the Settings class.
+        @param user:User currently authenticated user.
+        @param identifier:Id of the company
+        '''
+        self.__user = user
+        super(Resource, self).__init__(user.get_client())
+
+
+    @property
+    def uri(self):
+        '''
+        Gets the URI of the resource.
+        @return: str
+        '''
+        return self.__user.get_uri() + "company/"
+
+
+
+class EmailBase(Resource):
+    '''
+    Represent an email address on Greendizer
+    '''
+    def __init__(self, user, identifier):
+        '''
+        Initializes a new instance of the Email class
+        @param user:User Current user.
+        @param identifier:str ID of the email resource.
+        '''
+        if "@" in identifier:
+            identifier = hashlib.sha1(identifier).hexdigest()
+
+        super(Resource, self).__init__(user.get_client(), identifier)
+        self.__user = user
+        self.__invoiceNode = Node()
+        self.__id = identifier
+
+
+
+    @property
+    def uri(self):
+        '''
+        Gets the URI of this resource.
+        @return: str
+        '''
+        return "%semails/%s/" % (self.__user.get_uri(), self.get_id())
+
+
+    @property
+    def label(self):
+        '''
+        Gets the label of this address
+        @return: str
+        '''
+        return self._get_attribute("label")
+
+
+
+
+class InvoiceNodeBase(Node):
+    '''
+    Represents a node giving access to invoices.
+    '''
+    def __init__(self, email, resource_cls):
+        '''
+        Initializes a new instance of the InvoiceNode class.
+        @param email:Email Email instance to which the node is tied.
+        @param resource_cls:Class Class with which invoices will be instantiated
+        '''
+        self.__email = email
+        super(InvoiceNodeBase, self).__init__(email.get_client(),
+                                          uri=email.get_uri() + "invoices/",
+                                          resource_cls=resource_cls)
+
+
+    def get_resource_by_id(self, identifier):
+        '''
+        Gets an invoice using its ID.
+        @param identifier:str ID of the invoice.
+        @return: Invoice
+        '''
+        return self.resource_class(self.__email, identifier)
+
+
+    def get_email(self):
+        '''
+        Gets the email instance to which this node is attached.
+        @return: Email
+        '''
+        return self.__email
+
+
+    def get_archived(self):
+        '''
+        Gets a collection to manipulate archived invoices.
+        @return: Collection
+        '''
+        return self.search(query="location==1")
+
+
+    def get_trashed(self):
+        '''
+        Gets a collection to manipulate trashed invoices.
+        @return: Collection
+        '''
+        return self.search(query="location==2")
+
+
+    def get_unread(self):
+        '''
+        Gets a collection to manipulate unread invoices.
+        @return: Collection
+        '''
+        return self.search(query="read==0")
+
+
+    def get_flagged(self):
+        '''
+        Gets a collection to manipulate flagged invoices.
+        @return: Collection
+        '''
+        return self.search(query="flagged==1")
+
+
+    def get_overdue(self):
+        '''
+        Gets a collection to manipulate overdue invoices.
+        @return: Collection
+        '''
+        return self.search("paid==0|dueDate<<" + datetime.now().isoformat())
+
+
+
+
+class InvoiceBase(Resource):
+    '''
+    Represent an email address on Greendizer
+    '''
+    def __init__(self, email, identifier):
+        '''
+        Initializes a new instance of the Email class
+        @param email:Email Email instance of the origin of this invoice.
+        @param identifier:str ID of the email resource.
+        '''
+        super(Resource, self).__init__(email.get_client(), identifier)
+        self.__email = email
+        self.__id = identifier
+
+
+    @property
+    def email(self):
+        '''
+        Gets the email instance to which this invoice is attached.
+        @return:Email
+        '''
+        return self.__email
+
+
+    @property
+    def uri(self):
+        '''
+        Gets the URI of this resource.
+        @return: str
+        '''
+        return "%sinvoices/%s/" % (self.__email.get_uri(), self.get_id())
+
+
+    @property
+    def name(self):
+        '''
+        Gets the name of the invoice.
+        @return: str
+        '''
+        return self._get_attribute("name")
+
+
+    @property
+    def description(self):
+        '''
+        Gets the description of the invoice
+        @return: str
+        '''
+        return self._get_attribute("description")
+
+
+    @property
+    def currency(self):
+        '''
+        Gets the currency of the invoice.
+        @return:str
+        '''
+        return self._get_attribute("currency")
+
+
+    @property
+    def date(self):
+        '''
+        Gets the invoice date.
+        @return: datetime
+        '''
+        return self._get_date_attribute("date")
+
+
+    @property
+    def due_date(self):
+        '''
+        Gets the due date of the invoice.
+        @return: datetime
+        '''
+        return self._get_date_attribute("dueDate")
+
+
+    @property
+    def secretKey(self):
+        '''
+        Gets the secret key of the invoice.
+        @return: str
+        '''
+        return self._get_attribute("secretKey")
+
+
+    def __get_location(self):
+        '''
+        Gets a value indicating the location of the invoice.
+        @return: int
+        '''
+        return self._get_attribute("location")
+
+
+    def __set_location(self, value):
+        '''
+        Sets a value indicating the location of the invoice.
+        @param value:int
+        '''
+        self._register_update("location", value)
+
+
+    def __get_read(self):
+        '''
+        Gets a value indicating whether the invoice has been read or not.
+        @return: bool
+        '''
+        return self._get_attribute("read")
+
+
+    def __set_read(self, value):
+        '''
+        Sets a value indicating whether the invoice has been read or not.
+        @param value:bool
+        '''
+        self._register_update("read", value)
+
+
+    def __get_flagged(self):
+        '''
+        Gets a value indicating whether the invoice has been flagged or not.
+        @return: bool
+        '''
+        return self._get_attribute("flagged")
+
+
+    def __set_flagged(self, value):
+        '''
+        Sets a value indicating whether the invoice has been flagged or not.
+        @param value:bool
+        '''
+        self._register_update("flagged", value)
+
+
+    def __get_paid(self):
+        '''
+        Gets a value indicating whether the invoice has been paid or not.
+        @return: bool
+        '''
+        return self._get_attribute("paid")
+
+
+    def __set_paid(self, value):
+        '''
+        Sets a value indicating whether the invoice has been paid or not.
+        @param value:bool
+        '''
+        self._register_update("paid", value)
+
+
+    location = property(__get_location, __set_location)
+    read = property(__get_read, __set_read)
+    flagged = property(__get_flagged, __set_flagged)
+    paid = property(__get_flagged, __set_flagged)
+
+
+
+
+class ThreadNodeBase(Node):
+    '''
+    Represents a node giving access to conversation threads.
+    '''
+    def get_archived(self):
+        '''
+        Gets a collection to manipulate archived threads.
+        @return: Collection
+        '''
+        return self.search(query="location==1")
+
+
+    def get_trashed(self):
+        '''
+        Gets a collection to manipulate trashed threads.
+        @return: Collection
+        '''
+        return self.search(query="location==2")
+
+
+    def get_unread(self):
+        '''
+        Gets a collection to manipulate unread threads.
+        @return: Collection
+        '''
+        return self.search(query="read==0")
+
+
+    def get_flagged(self):
+        '''
+        Gets a collection to manipulate flagged threads.
+        @return: Collection
+        '''
+        return self.search(query="flagged==1")
+
+
+
+
+class ThreadBase(Resource):
+    '''
+    Represents a conversation thread.
+    '''
+    def __init__(self, **kwargs):
+        '''
+        Initializes a new instance of the ThreadBase class.
+        '''
+        #@TODO: add Node
+        self.__messageNode = None
+        super(ThreadBase, self).__init__(**kwargs)
+
+
+    @property
+    def messages(self):
+        '''
+        Gets access to the messages of the thread.
+        @return: MessageNode
+        '''
+        return self.__messageNode
+
+
+    @property
+    def messagesCount(self):
+        '''
+        Gets the number of messages in the thread
+        @return: int
+        '''
+        return self._get_attribute("count")
+
+
+    @property
+    def subject(self):
+        '''
+        Gets the subject of the thread.
+        @return: str
+        '''
+        return self._get_attribute("subject")
+
+
+    @property
+    def snippet(self):
+        '''
+        Gets a snippet of the lastest message in the thread
+        @return: str 
+        '''
+        return self._get_attribute("snippet")
+
+
+    @property
+    def lastMessageDate(self):
+        '''
+        Gets the date at which the latest message was sent.
+        @return: date
+        '''
+        return self._get_date_attribute("lastMessage")
+
+
+    def __get_location(self):
+        '''
+        Gets a value indicating the location of the thread.
+        @return: int
+        '''
+        return self._get_attribute("location")
+
+
+    def __set_location(self, value):
+        '''
+        Sets a value indicating the location of the thread.
+        @param value:int
+        '''
+        self._register_update("location", value)
+
+
+    def __get_read(self):
+        '''
+        Gets a value indicating whether the thread has been read or not.
+        @return: bool
+        '''
+        return self._get_attribute("read")
+
+
+    def __set_read(self, value):
+        '''
+        Sets a value indicating whether the thread has been read or not.
+        @param value:bool
+        '''
+        self._register_update("read", value)
+
+
+    def __get_flagged(self):
+        '''
+        Gets a value indicating whether the thread has been flagged or not.
+        @return: bool
+        '''
+        return self._get_attribute("flagged")
+
+
+    def __set_flagged(self, value):
+        '''
+        Sets a value indicating whether the thread has been flagged or not.
+        @param value:bool
+        '''
+        self._register_update("flagged", value)
+
+
+    location = property(__get_location, __set_location)
+    read = property(__get_read, __set_read)
+    flagged = property(__get_flagged, __set_flagged)
+
+
+
+
+class Message(Resource):
+    '''
+    Represents a message inside a conversation thread.
+    '''
+    def __init__(self, thread, identifier):
+        '''
+        Initializes a new instance of the Message class.
+        @param thread:ThreadBase Parent thread.
+        @param identifier:ID of the message.
+        '''
+        self.__thread = thread
+        super(Message, self).__init__(thread.client, identifier)
+
+
+    @property
+    def uri(self):
+        '''
+        Gets the URI of the message.
+        @return: str
+        '''
+        return "%smessages/%s/" % (self.__thread.uri, self.id)
+
+
+    @property
+    def thread(self):
+        '''
+        Gets the parent thread.
+        @return: ThreadBase
+        '''
+        return self.__thread
+
+
+    @property
+    def text(self):
+        '''
+        Gets the content of the message
+        @return: str
+        '''
+        return self._get_attribute("text")
+
+
+    @property
+    def is_from_current_user(self):
+        '''
+        Gets a value indicating whether the message has been sent by the
+        currently authenticated user.
+        @return: bool
+        '''
+        return self._get_attribute("sender")

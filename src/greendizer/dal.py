@@ -30,7 +30,8 @@ class ResourceConflictException(Exception):
         self.__conflict_type = conflict_type
 
 
-    def get_resource(self):
+    @property
+    def resource(self):
         '''
         Gets the conflicting resource
         @return: Resource

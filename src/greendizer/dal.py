@@ -11,6 +11,7 @@ RESPONSE_SIZE_LIMIT = 200
 
 
 
+
 class ResourceDeletedException(Exception):
     '''
     Represents the exception raised if a resource has been 
@@ -422,7 +423,8 @@ class Collection(object):
             return
 
         if response.status_code not in [200, 206]: #(OK, Partial Content)
-            return
+            return Exception("Unexpected response from the server (code: %s)"
+                             % response.status_code)
 
         if not head:
             self.__resources = {}

@@ -313,9 +313,9 @@ class Collection(object):
 
     def __iter__(self):
         '''
-        Allows iterations over the resource dict contained in the collection.
+        Allows iterations over the resources contained in the collection.
         '''
-        return self.__resources
+        return self.__list
 
 
     def __getitem__(self, identifier):
@@ -368,7 +368,7 @@ class Collection(object):
         Gets the loaded resources
         @return: dict
         '''
-        return self.__list
+        return self.__resources
 
 
     @property

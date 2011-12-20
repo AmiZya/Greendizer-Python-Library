@@ -9,7 +9,7 @@ class Client(object):
     Represents a Greendizer API client
     '''
 
-    def __init__(self, user, email=None, password=None, access_token=None):
+    def __init__(self, user, access_token=None, email=None, password=None):
         '''
         Initializes a new instance of the Client class.
         Either provide an email/password, or a valid access_token
@@ -75,12 +75,12 @@ class BuyerClient(Client):
     '''
     Represents a buyer oriented client of the Greendizer API
     '''
-    def __init__(self, email=None, password=None, oauth_token=None):
+    def __init__(self, oauth_token=None, email=None, password=None):
         '''
         Initializes a new instance of the BuyerClient class
         '''
-        super(BuyerClient, self).__init__(Buyer(self), email, password,
-                                          oauth_token)
+        super(BuyerClient, self).__init__(Buyer(self), oauth_token, email,
+                                          password)
 
     @property
     def buyer(self):
@@ -97,12 +97,12 @@ class SellerClient(Client):
     '''
     Represents a seller oriented client of the Greendizer API
     '''
-    def __init__(self, email=None, password=None, oauth_token=None):
+    def __init__(self, oauth_token=None, email=None, password=None):
         '''
         Initializes a new instance of the SellerClient class
         '''
-        super(SellerClient, self).__init__(Seller(self), email, password,
-                                           oauth_token)
+        super(SellerClient, self).__init__(Seller(self), oauth_token, email,
+                                           password)
 
 
     @property

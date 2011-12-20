@@ -315,7 +315,7 @@ class Collection(object):
         '''
         Allows iterations over the resources contained in the collection.
         '''
-        return self.__list
+        return iter(self.__list)
 
 
     def __getitem__(self, identifier):

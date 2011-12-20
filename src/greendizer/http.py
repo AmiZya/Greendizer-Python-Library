@@ -1,14 +1,21 @@
-from datetime import datetime, date, time
+import time
 import urllib, urllib2
 import simplejson
 import re
-import io
 import zlib
+from datetime import datetime, date
 from gzip import GzipFile
+from StringIO import StringIO
+from greendizer.base import is_empty_or_none
+
+
 
 
 COMPRESSION_DEFLATE = "deflate"
 COMPRESSION_GZIP = "gzip"
+API_ROOT = "https://api.greendizer.com/"
+
+
 
 
 class ApiException(Exception):
@@ -62,27 +69,43 @@ class Request(object):
             urllib2.Request.__init__(self, uri, **kwargs)
 
 
-        @property
-        def method(self):
+        def get_method(self):
             '''
             Gets the HTTP method in use.
             '''
             return self.__method
 
 
-    def __init__(self, client, method="GET", uri=None,
+    def __init__(self, client=None, method="GET", uri=None,
                  content_type="application/x-www-form-urlencoded", data=None):
         '''
         Initializes a new instance of the Request class.
         @param method:str HTTP method
         @param content_type:str MIME type of the data to carry to the server.
         '''
-        self.__client = client
+        if is_empty_or_none(uri):
+            raise ValueError("Invalid URI.")
+
+        if (is_empty_or_none(method)
+            or method.lower() not in ["head", "get", "post", "put", "patch",
+                                      "delete", "options"]):
+            raise ValueError("Invalid HTTP method.")
+
+        if (is_empty_or_none(content_type)
+            or content_type not in ["application/xml",
+                                    "application/x-www-form-urlencoded"]):
+            raise ValueError("Invalid content type value.")
+
+        if not data and method.lower() in ["post", "put", "patch"]:
+            raise ValueError("Data is not expected to be None.")
+
         self.__content_type = content_type
         self.data = data
         self.uri = uri
         self.method = method
         self.headers = {}
+        if client:
+            client.sign_request(self)
 
 
     def __getitem__(self, header):
@@ -118,7 +141,7 @@ class Request(object):
         @return: dict
         '''
         serialized = {}
-        for header, value in self.headers:
+        for header, value in self.headers.items():
             if isinstance(value, datetime) or isinstance(value, date):
                 serialized[header] = value.isoformat()
             else:
@@ -136,40 +159,44 @@ class Request(object):
         headers.update({
             "Accept": "application/json",
             "User-Agent": "Greendizer Python Library/1.0",
-            "Authorization": self.__client.generate_authorization_header(),
             "Accept-Encoding": "gzip, deflate"
         })
 
-        method = self.__method
-        if self.__method == "PATCH":
-            headers["X-Http-Method-Override"] = self.__method
+        method = self.method
+        if self.method == "PATCH":
+            headers["X-HTTP-Method-Override"] = self.method
             method = "POST"
 
-        data = None
+        encoded_data = None
         if method in ["POST", "PATCH", "PUT"] and self.data:
             headers["Content-Type"] = self.__content_type
-            if self.__content_type != "application/x-www-form-urlencoded":
-                data = urllib.urlencode(self.data)
+            if self.__content_type == "application/x-www-form-urlencoded":
+                encoded_data = urllib.urlencode(self.data)
             else:
                 #Compress to GZip
                 headers["Content-Encoding"] = COMPRESSION_GZIP
-                bf = io.BytesIO('')
+                bf = StringIO('')
                 f = GzipFile(fileobj=bf, mode='wb', compresslevel=9)
-                f.write(data)
+                f.write(self.data)
                 f.close()
-                data = bf.getvalue()
+                encoded_data = bf.getvalue()
 
-        request = Request.HttpRequest("https://api.greendizer.com/" + self.uri,
-                                      method)
+        request = Request.HttpRequest(API_ROOT + self.uri, data=encoded_data,
+                                      method=method, headers=headers)
+
         try:
-            response = urllib2.urlopen(request, data, headers)
-            return Response(self, 200, response.read(), response.info)
-        except(urllib2.URLError), e:
-            instance = Response(self, e.status, e.read(), e.info)
-            if e.status not in [201, 202, 204, 206, 304, 408, 416]:
+            response = urllib2.urlopen(request)
+            return Response(self, 200, response.read(), response.info())
+
+        except(urllib2.HTTPError), e:
+            instance = Response(self, e.code, e.read(), e.info())
+            if e.code not in [201, 202, 204, 206, 304, 408, 416]:
                 raise ApiException(instance)
 
             return instance
+
+        except urllib2.URLError:
+            raise Exception("Unable to reach the server")
 
 
 
@@ -189,11 +216,11 @@ class Response(object):
         self.__request = request
         self.__status_code = status_code
 
-        content_encoding = info.getHeader("Content-Encoding", None)
+        content_encoding = info.getheader("Content-Encoding", None)
         if content_encoding == COMPRESSION_DEFLATE:
             data = zlib.decompress(data)
         elif content_encoding == COMPRESSION_GZIP:
-            data = GzipFile(fileobj=io.BytesIO(data)).read()
+            data = GzipFile(fileobj=StringIO(data)).read()
 
         self.__data = data
         self.__info = info
@@ -204,9 +231,10 @@ class Response(object):
         Gets the value of a header
         @return: object
         '''
-        if(header in ["Date", "Last-Modified"]
-           and self.__info.getHeader(header, None)):
-            value = self.__info.getHeader(header)
+        header = header.lower()
+        if(header in ["date", "last-modified"]
+           and self.__info.getheader(header, None)):
+            value = self.__info.getheader(header)
             if "GMT" in value:
                 #RFC1122
                 return datetime.strptime(value, "%a, %d %b %Y %H:%M:%S GMT")
@@ -221,13 +249,13 @@ class Response(object):
                 return datetime(*map(int, re.split('[^\d]', value)[:-1]))
 
 
-        if header == "Etag":
-            return Etag.parse(self.__info.getHeader(header, None))
+        if header == "etag":
+            return Etag.parse(self.__info.getheader(header, None))
 
-        if header == "Content-Range":
-            return ContentRange.parse(self.__info.getHeader(header, None))
+        if header == "content-range":
+            return ContentRange.parse(self.__info.getheader(header, None))
 
-        return self.__info.getHeader(header, None)
+        return self.__info.getheader(header, None)
 
 
     @property
@@ -299,7 +327,9 @@ class Etag(object):
         Returns a string representation of the Etag
         @return: str
         '''
-        return "%s-%s" % (self.__last_modified.time() * 1000, self.__id)
+        timestamp = (time.mktime(self.__last_modified.utctimetuple()) * 1000
+                    + self.__last_modified.microsecond / 1000)
+        return "%s-%s" % (timestamp, self.__id)
 
 
     @classmethod
@@ -313,7 +343,7 @@ class Etag(object):
             return
 
         parts = raw.split("-")
-        return cls(datetime.fromtimestamp(int(parts[0]) / 1000), long(parts[1]))
+        return cls(datetime.fromtimestamp(int(parts[0]) / 1000), parts[1])
 
 
 
@@ -322,16 +352,16 @@ class Range(object):
     '''
     Represents an HTTP Range
     '''
-    def __init__(self, unit="resources", offset=0, last=200):
+    def __init__(self, unit="resources", offset=0, limit=200):
         '''
         Initializes a new instance of the Range class.
         @param unit:str Range unit
         @param offset:int Range offset
-        @param last:int Zero-based of the last element to include
+        @param limit:int Number of elements to include.
         '''
         self.unit = unit
         self.offset = offset
-        self.last = last
+        self.limit = limit
 
 
     def __str__(self):
@@ -339,7 +369,7 @@ class Range(object):
         Returns a string representation of the object
         @return: str
         '''
-        return "%s=%d-%d" % (self.unit, self.offset, self.last)
+        return "%s=%d-%d" % (self.unit, self.offset, self.limit)
 
 
 
@@ -347,10 +377,10 @@ class ContentRange(object):
     '''
     Represents an HTTP Content-Range
     '''
-    REG_EXP = r'^(?P<unit>\w+) (?P<offset>\d+)-(?P<last>\d+)\/(?P<total>\d+)$'
+    REG_EXP = r'^(?P<unit>\w+)(?:[ ]|=)(?P<offset>\d+)-(?P<last>\d+)\/(?P<total>\d+)$'
 
 
-    def __init__(self, unit, offset, last, total):
+    def __init__(self, unit, offset, limit, total):
         '''
         Initializes a new instance of the ContentRange class.
         @param unit:str Range unit
@@ -360,7 +390,7 @@ class ContentRange(object):
         '''
         self.__unit = unit
         self.__offset = int(offset)
-        self.__last = int(last)
+        self.__limit = int(limit)
         self.__total = int(total)
 
 
@@ -383,12 +413,12 @@ class ContentRange(object):
 
 
     @property
-    def last(self):
+    def limit(self):
         '''
         Gets the zero-based index of the last element in the range
         @return: int
         '''
-        return self.__last
+        return self.__limit
 
 
     @property
@@ -407,12 +437,12 @@ class ContentRange(object):
         @param raw:str String to parse
         @return: ContentRange
         '''
-        if not raw or len(raw) == 0:
+        if is_empty_or_none(raw):
             return
 
         match = re.match(cls.REG_EXP, raw)
-        if len(match.groupdict()) < 4:
+        if not match or len(match.groupdict()) < 4:
             return
 
-        return cls(**match.groupdict())
+        return cls(*match.groups())
 

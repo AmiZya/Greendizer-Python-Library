@@ -9,16 +9,15 @@ class User(Resource):
     '''
     Represents a generic user on Greendizer.
     '''
-    def __init__(self, **kwargs):
+    def __init__(self, client):
         '''
         Initializes a new instance of the User class.
         '''
-        super(Resource, self).__init__(**kwargs)
+        super(User, self).__init__(client, "me")
         self.__company = Employer(self)
         self.__settings = Settings(self)
-        self.__emailNode = Node(kwargs["client"],
-                                uri=self.get_uri() + "emails/",
-                                resource_type=None)
+        self.__emailNode = Node(client, self.uri + "emails/", None)
+
 
     @property
     def emails(self):
@@ -44,7 +43,7 @@ class User(Resource):
         Gets the company of this user.
         @return: Company
         '''
-        self.__company
+        return self.__company
 
 
     @property
@@ -71,7 +70,7 @@ class User(Resource):
         Gets the last name
         @return: str
         '''
-        return "%s %s" % (self.get_firstname(), self.get_lastname())
+        return "%s %s" % (self.first_name, self.last_name)
 
 
     @property
@@ -89,10 +88,7 @@ class User(Resource):
         Gets the birthday
         @return: date
         '''
-        try:
-            return self._get_date_attribute("birthday").date
-        except:
-            pass
+        return self._get_date_attribute("birthday").date
 
 
 
@@ -106,7 +102,8 @@ class Settings(Resource):
         Initializes a new instance of the Settings class.
         @param client:Client Current client instance.
         '''
-        super(Resource, self).__init__(user.get_client())
+        self.__user = user
+        super(Settings, self).__init__(user.client)
 
 
     @property
@@ -115,7 +112,7 @@ class Settings(Resource):
         Gets the URI of the resource.
         @return:str
         '''
-        return self.__user.get_uri() + "settings/"
+        return self.__user.uri + "settings/"
 
 
     @property
@@ -208,7 +205,7 @@ class Employer(Company):
         @param identifier:Id of the company
         '''
         self.__user = user
-        super(Resource, self).__init__(user.get_client())
+        super(Employer, self).__init__(user.client)
 
 
     @property
@@ -217,7 +214,7 @@ class Employer(Company):
         Gets the URI of the resource.
         @return: str
         '''
-        return self.__user.get_uri() + "company/"
+        return self.__user.uri + "company/"
 
 
 
@@ -234,9 +231,8 @@ class EmailBase(Resource):
         if "@" in identifier:
             identifier = hashlib.sha1(identifier).hexdigest()
 
-        super(Resource, self).__init__(user.get_client(), identifier)
+        super(EmailBase, self).__init__(user.client, identifier)
         self.__user = user
-        self.__invoiceNode = Node()
         self.__id = identifier
 
 
@@ -247,7 +243,7 @@ class EmailBase(Resource):
         Gets the URI of this resource.
         @return: str
         '''
-        return "%semails/%s/" % (self.__user.get_uri(), self.get_id())
+        return "%semails/%s/" % (self.__user.uri, self.id)
 
 
     @property
@@ -272,8 +268,8 @@ class InvoiceNodeBase(Node):
         @param resource_cls:Class Class with which invoices will be instantiated
         '''
         self.__email = email
-        super(InvoiceNodeBase, self).__init__(email.get_client(),
-                                          uri=email.get_uri() + "invoices/",
+        super(InvoiceNodeBase, self).__init__(email.client,
+                                          uri=email.uri + "invoices/",
                                           resource_cls=resource_cls)
 
 
@@ -283,7 +279,7 @@ class InvoiceNodeBase(Node):
         @param identifier:str ID of the invoice.
         @return: Invoice
         '''
-        return self.resource_class(self.__email, identifier)
+        return self._resource_cls(self.__email, identifier)
 
 
     def get_email(self):
@@ -346,7 +342,7 @@ class InvoiceBase(Resource):
         @param email:Email Email instance of the origin of this invoice.
         @param identifier:str ID of the email resource.
         '''
-        super(Resource, self).__init__(email.get_client(), identifier)
+        super(InvoiceBase, self).__init__(email.client, identifier)
         self.__email = email
         self.__id = identifier
 
@@ -366,7 +362,7 @@ class InvoiceBase(Resource):
         Gets the URI of this resource.
         @return: str
         '''
-        return "%sinvoices/%s/" % (self.__email.get_uri(), self.get_id())
+        return "%sinvoices/%s/" % (self.__email.uri, self.id)
 
 
     @property
@@ -385,6 +381,24 @@ class InvoiceBase(Resource):
         @return: str
         '''
         return self._get_attribute("description")
+
+
+    @property
+    def total(self):
+        '''
+        Gets the total of the invoice.
+        @return: float
+        '''
+        return self._get_attribute("total")
+
+
+    @property
+    def body(self):
+        '''
+        Gets the body of the invoice.
+        @return: str 
+        '''
+        return self._get_attribute("body")
 
 
     @property
@@ -411,7 +425,7 @@ class InvoiceBase(Resource):
         Gets the due date of the invoice.
         @return: datetime
         '''
-        return self._get_date_attribute("dueDate")
+        return self._get_date_attribute("due_date")
 
 
     @property
@@ -537,22 +551,11 @@ class ThreadBase(Resource):
     '''
     Represents a conversation thread.
     '''
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
         '''
         Initializes a new instance of the ThreadBase class.
         '''
-        #@TODO: add Node
-        self.__messageNode = None
-        super(ThreadBase, self).__init__(**kwargs)
-
-
-    @property
-    def messages(self):
-        '''
-        Gets access to the messages of the thread.
-        @return: MessageNode
-        '''
-        return self.__messageNode
+        super(ThreadBase, self).__init__(*args, **kwargs)
 
 
     @property
@@ -646,7 +649,24 @@ class ThreadBase(Resource):
 
 
 
-class Message(Resource):
+class MessageNodeBase(Node):
+    '''
+    Represents an API node giving access to messages.
+    '''
+    def __init__(self, thread, message_cls):
+        '''
+        Initializes a new instance of the MessageNode
+        @param thread: ThreadBase instance.
+        @param resource_cls: Class Message class.
+        '''
+        super(MessageNodeBase, self).__init__(thread.client,
+                                              thread.uri + "messages/",
+                                              message_cls)
+
+
+
+
+class MessageBase(Resource):
     '''
     Represents a message inside a conversation thread.
     '''
@@ -657,7 +677,7 @@ class Message(Resource):
         @param identifier:ID of the message.
         '''
         self.__thread = thread
-        super(Message, self).__init__(thread.client, identifier)
+        super(MessageBase, self).__init__(thread.client, identifier)
 
 
     @property

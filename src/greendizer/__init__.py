@@ -18,19 +18,21 @@ class Client(object):
         @param password:str Password
         @param access_token:str OAuth access token
         '''
+        self.__authorization_header = None
         self._user = user
-        self.__email = email
-        self.__password = password
-        self.__access_token = access_token
+        self._email = email
+        self._password = password
+        self._access_token = access_token
+        self._generate_authorization_header()
 
 
     @property
-    def email(self):
+    def email_address(self):
         '''
         Gets the email address of the user
         @return: str
         '''
-        return self.__email
+        return self._email
 
 
     @property
@@ -42,16 +44,29 @@ class Client(object):
         return self._user
 
 
-    def generate_authorization_header(self):
+    def _generate_authorization_header(self):
         '''
         Generates an HTTP authorization header depending
         on the authentication method set at the instance
         initialization.
         '''
-        if self.__email and self.__password:
-            return base64.encode("%s:%s" % (self.__email, self.__password))
+        if self._email and self._password:
+            encoded = base64.encodestring("%s:%s" % (self._email,
+                                                     self._password))
 
-        return "BEARER " + self.__access_token
+            self.__authorization_header = "BASIC " + encoded.strip("\n")
+        else:
+            self.__authorization_header = "BEARER " + self._access_token
+
+
+    def sign_request(self, request):
+        '''
+        Signs a request to make it pass security.
+        @param request:greendizer.http.Request
+        @return: greendizer.http.Request
+        '''
+        request["Authorization"] = self.__authorization_header
+        return request
 
 
 
@@ -87,7 +102,7 @@ class SellerClient(Client):
         Initializes a new instance of the SellerClient class
         '''
         super(SellerClient, self).__init__(Seller(self), email, password,
-                                          oauth_token)
+                                           oauth_token)
 
 
     @property

@@ -1,8 +1,13 @@
 import urllib
-from datetime import datetime
+import time
+from datetime import datetime, date
 from greendizer.base import is_empty_or_none
 from greendizer.http import Request, Etag, Range
 
+
+
+
+RESPONSE_SIZE_LIMIT = 200
 
 
 
@@ -62,7 +67,6 @@ class Resource(object):
     '''
     Represents a generic resource
     '''
-
     def __init__(self, client, identifier=None):
         '''
         Initializes a new instance of the Resource class.
@@ -71,9 +75,9 @@ class Resource(object):
         '''
         self.__client = client
         self.__id = identifier or "0"
-        self.__lastModified = datetime(1970, 1, 1)
-        self.__rawData = None
-        self.__rawUpdates = None
+        self.__last_modified = datetime(1970, 1, 1)
+        self.__rawData = {}
+        self.__rawUpdates = {}
         self.__deleted = False
 
 
@@ -114,7 +118,11 @@ class Resource(object):
         if self.__deleted:
             raise ResourceDeletedException()
 
-        if self._get_attribute(name) != value:
+        if isinstance(value, datetime) or isinstance(value, date):
+            value = (time.mktime(value.utctimetuple()) * 1000
+                    + value.microsecond / 1000)
+
+        if self.__rawData.get(name, None) != value:
             self.__rawData[name] = value
             return True
 
@@ -130,8 +138,7 @@ class Resource(object):
         if self.__deleted:
             raise ResourceDeletedException()
 
-        if (not is_empty_or_none(value)
-            and self.__rawData.get(attribute, None) != value):
+        if self.__rawData.get(attribute, None) != value:
             self.__rawUpdates[attribute] = value
 
 
@@ -167,7 +174,7 @@ class Resource(object):
         Returns the ETag of the resource.
         @return: Etag
         '''
-        return Etag(self.__lastModified, self.__id)
+        return Etag(self.__last_modified, self.__id)
 
 
     @property
@@ -197,14 +204,14 @@ class Resource(object):
         if not len(data):
             return
 
-        self.__lastModified = etag.last_modified
+        self.__last_modified = etag.last_modified
         self.__id = etag.id
 
         if "etag" in data:
             del data["etag"]
 
         changed = False
-        for item, value in data:
+        for item, value in data.items():
             changed = self._set_attribute(item, value) or False
 
         return changed
@@ -296,15 +303,16 @@ class Collection(object):
         '''
         self.__node = node
         self.__query = query
-        self.__uri = uri + ("?q=" + urllib.urlencode(query)) if query else ""
-        self.__contentRange = None
+        self.__uri = uri + (("?q=" + urllib.quote_plus(query)) if query else "")
+        self.__content_range = None
         self.__etag = Etag(datetime(1970, 1, 1), 0)
         self.__resources = {}
+        self.__list = []
 
 
     def __iter__(self):
         '''
-        Allows iterations over the resource contained in the collection.
+        Allows iterations over the resource dict contained in the collection.
         '''
         return self.__resources
 
@@ -350,7 +358,7 @@ class Collection(object):
         Gets the date of the last modification recorded
         @return: datetime
         '''
-        return self.__lastModified
+        return self.__etag.last_modified
 
 
     @property
@@ -359,7 +367,7 @@ class Collection(object):
         Gets the loaded resources
         @return: dict
         '''
-        return self.__resources
+        return self.__list
 
 
     @property
@@ -368,10 +376,10 @@ class Collection(object):
         Gets the estimated number of resources available on the server
         @return: int
         '''
-        if not self.__contentRange:
+        if not self.__content_range:
             self.load_info()
 
-        return self.__contentRange.total
+        return self.__content_range.total
 
 
     def load_info(self):
@@ -381,28 +389,36 @@ class Collection(object):
         self.populate(0, 1, head=True)
 
 
-    def populate(self, offset=None, limit=200, head=False):
+    def populate(self, offset=0, limit=200, head=False, fields=None):
         '''
         Populates the collection with resources from the server
         @param offset:int Offset
         @param limit:int Limit (Max: 200)
         '''
-        request = Request(self.__node.client, uri=self.uri,
-                          method=("HEAD" if head else "GET"))
+        uri = self.__uri
 
-        if offset and limit:
-            request["Range"] = Range(offset=offset, limit=limit)
+        if not is_empty_or_none(fields):
+            fields = "fields=" + urllib.quote_plus(fields)
+            uri = uri + ("?" if not self.__query else "&") + fields
+
+        request = Request(self.__node.client, uri=uri,
+                          method="HEAD" if head else "GET")
+
+        if offset != None and limit != None:
+            request["Range"] = Range(offset=offset,
+                                     limit=min(RESPONSE_SIZE_LIMIT, limit))
         else:
             request["If-None-Match"] = self.__etag
             request["If-Modified-Since"] = self.__etag.last_modified
 
 
         response = request.get_response()
-        self.__contentRange = response["Content-Range"]
+        self.__content_range = response["Content-Range"]
         self.__etag = response["Etag"]
 
         if response.status_code in [204, 416]: #(No-Content, Out-Range)
             self.__resources = {}
+            self.__list = []
             return
 
         if response.status_code not in [200, 206]: #(OK, Partial Content)
@@ -410,10 +426,12 @@ class Collection(object):
 
         if not head:
             self.__resources = {}
+            self.__list = []
             for item in response.data:
                 etag = Etag.parse(item["etag"])
-                resource = self.__resourceType(self.__node.client, etag.id)
+                resource = self.__node[etag.id]
                 resource.sync(item, etag)
+                self.__list.append(resource)
                 self.__resources[str(resource.id)] = resource
 
 
@@ -433,25 +451,25 @@ class Node(object):
         self.__client = client
         self.__uri = uri
         self.__collections = {}
-        self.__resource_cls = resource_cls
+        self._resource_cls = resource_cls
 
 
     def __getitem__(self, identifier):
         '''
         Gets a resource by its ID.
-        @param identifier: str ID of the resource
+        @param identifier:str ID of the resource
         @return: Resource
         '''
-        return self.get_resource_by_id(id)
+        return self.get_resource_by_id(identifier)
 
 
     def get_resource_by_id(self, identifier):
         '''
         Gets a resource by its ID.
-        @param identifier: str ID of the resource
+        @param identifier:str ID of the resource
         @return: Resource
         '''
-        return self.__resource_cls(self.__client, identifier)
+        return self._resource_cls(self.__client, identifier)
 
 
     @property
@@ -472,15 +490,6 @@ class Node(object):
         return self.search()
 
 
-    @property
-    def resource_class(self):
-        '''
-        Gets the ctor of the resources managed in this node.
-        @return: Class
-        '''
-        return self.__resource_cls
-
-
     def search(self, query=""):
         '''
         Returns a collection to filter the resources accessible from this node.
@@ -491,14 +500,3 @@ class Node(object):
             self.__collections[query] = Collection(self, self.__uri, query)
 
         return self.__collections[query]
-
-
-    def _create(self, data, content_type="application/x-www-form-urlencoded"):
-        '''
-        Creates and returns a new instance of the resource handled in this node.
-        @return: Resource
-        '''
-        request = Request(self.__client, uri=self.__uri, method="POST",
-                          content_type=content_type, data=data)
-
-        return request.get_response()

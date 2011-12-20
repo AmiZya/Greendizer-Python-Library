@@ -269,8 +269,8 @@ class InvoiceNodeBase(Node):
         '''
         self.__email = email
         super(InvoiceNodeBase, self).__init__(email.client,
-                                          uri=email.uri + "invoices/",
-                                          resource_cls=resource_cls)
+                                              uri=email.uri + "invoices/",
+                                              resource_cls=resource_cls)
 
 
     def get_resource_by_id(self, identifier):
@@ -715,3 +715,4 @@ class MessageBase(Resource):
         @return: bool
         '''
         return self._get_attribute("sender")
+

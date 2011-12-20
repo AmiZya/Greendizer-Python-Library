@@ -502,3 +502,4 @@ class Node(object):
             self.__collections[query] = Collection(self, self.__uri, query)
 
         return self.__collections[query]
+

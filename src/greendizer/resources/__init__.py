@@ -1,5 +1,5 @@
 import hashlib
-from datetime import datetime
+from datetime import date
 from greendizer.base import is_empty_or_none, extract_id_from_uri
 from greendizer.dal import Resource, Node
 from greendizer.http import Request
@@ -198,7 +198,7 @@ class Company(Resource):
 
 class Employer(Company):
     '''
-    Represents an employer on Greendizer
+    Represents the company employing a user on Greendizer.
     '''
     def __init__(self, user):
         '''
@@ -236,7 +236,6 @@ class EmailBase(Resource):
         super(EmailBase, self).__init__(user.client, identifier)
         self.__user = user
         self.__id = identifier
-
 
 
     @property
@@ -475,7 +474,7 @@ class InvoiceNodeBase(Node):
         Gets a collection to manipulate archived invoices.
         @return: Collection
         '''
-        return self.search(query="location==1")
+        return self.search("location==1")
 
 
     @property
@@ -484,7 +483,7 @@ class InvoiceNodeBase(Node):
         Gets a collection to manipulate trashed invoices.
         @return: Collection
         '''
-        return self.search(query="location==2")
+        return self.search("location==2")
 
 
     @property
@@ -493,7 +492,7 @@ class InvoiceNodeBase(Node):
         Gets a collection to manipulate unread invoices.
         @return: Collection
         '''
-        return self.search(query="read==0|location<<2")
+        return self.search("read==0|location<<2")
 
 
     @property
@@ -502,7 +501,16 @@ class InvoiceNodeBase(Node):
         Gets a collection to manipulate flagged invoices.
         @return: Collection
         '''
-        return self.search(query="flagged==1|location<<2")
+        return self.search("flagged==1|location<<2")
+
+
+    @property
+    def due(self):
+        '''
+        Gets a collection to manipulate all due invoices.
+        @return: Collection
+        '''
+        return self.search("paid==0|location<<2|canceled==0")
 
 
     @property
@@ -511,8 +519,8 @@ class InvoiceNodeBase(Node):
         Gets a collection to manipulate overdue invoices.
         @return: Collection
         '''
-        return self.search("paid==0|location<<2|dueDate<<"
-                           + datetime.now().isoformat())
+        return self.search("paid==0|location<<2|canceled==0|dueDate>>"
+                           + date.today().isoformat())
 
 
 
@@ -622,7 +630,7 @@ class ThreadNodeBase(Node):
         Gets a collection to manipulate threads in the inbox.
         @return: Collection
         '''
-        return self.search(query="location==0")
+        return self.search("location==0")
 
 
     @property
@@ -631,7 +639,7 @@ class ThreadNodeBase(Node):
         Gets a collection to manipulate archived threads.
         @return: Collection
         '''
-        return self.search(query="location==1")
+        return self.search("location==1")
 
 
     @property
@@ -640,7 +648,7 @@ class ThreadNodeBase(Node):
         Gets a collection to manipulate trashed threads.
         @return: Collection
         '''
-        return self.search(query="location==2")
+        return self.search("location==2")
 
 
     @property
@@ -649,7 +657,7 @@ class ThreadNodeBase(Node):
         Gets a collection to manipulate unread threads.
         @return: Collection
         '''
-        return self.search(query="read==0|location<<2")
+        return self.search("read==0|location<<2")
 
 
     @property
@@ -658,7 +666,7 @@ class ThreadNodeBase(Node):
         Gets a collection to manipulate flagged threads.
         @return: Collection
         '''
-        return self.search(query="flagged==1|location<<2")
+        return self.search("flagged==1|location<<2")
 
 
     def open(self, recipient_id, subject, message):
@@ -686,6 +694,7 @@ class ThreadNodeBase(Node):
             thread_id = extract_id_from_uri(response["Location"])
             thread = self.get_resource_by_id(thread_id)
             thread.sync(response.data, response["Etag"])
+            return thread
 
 
 

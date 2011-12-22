@@ -156,6 +156,7 @@ class Resource(object):
     def is_deleted(self):
         '''
         Gets a value indicating whether the resource has been deleted.
+        @return: bool
         '''
         return self.__deleted
 
@@ -471,6 +472,9 @@ class Node(object):
         @param identifier:str ID of the resource
         @return: Resource
         '''
+        if not self._resource_cls:
+            raise NotImplementedError()
+
         return self._resource_cls(self.__client, identifier)
 
 

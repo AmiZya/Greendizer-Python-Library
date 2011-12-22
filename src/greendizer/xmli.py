@@ -217,9 +217,9 @@ class Invoice(ExtensibleXMLiElement):
     __due_date = None
 
 
-    def __init__(self, name=None, description=None, currency=None, status="paid",
-                 date=datetime.now(), due_date=date.today(), custom_id=None,
-                 terms=None):
+    def __init__(self, name=None, description=None, currency=None,
+                 status="paid", date=datetime.now(), due_date=date.today(),
+                 custom_id=None, terms=None):
         '''
         Initializes a new instance of the Invoice class.
         @param name:str Invoice name.

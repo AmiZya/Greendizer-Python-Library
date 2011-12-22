@@ -257,81 +257,6 @@ class EmailBase(Resource):
 
 
 
-class InvoiceNodeBase(Node):
-    '''
-    Represents a node giving access to invoices.
-    '''
-    def __init__(self, email, resource_cls):
-        '''
-        Initializes a new instance of the InvoiceNode class.
-        @param email:Email Email instance to which the node is tied.
-        @param resource_cls:Class Class with which invoices will be instantiated
-        '''
-        self.__email = email
-        super(InvoiceNodeBase, self).__init__(email.client,
-                                              uri=email.uri + "invoices/",
-                                              resource_cls=resource_cls)
-
-
-    def get_resource_by_id(self, identifier):
-        '''
-        Gets an invoice using its ID.
-        @param identifier:str ID of the invoice.
-        @return: Invoice
-        '''
-        return self._resource_cls(self.__email, identifier)
-
-
-    def get_email(self):
-        '''
-        Gets the email instance to which this node is attached.
-        @return: Email
-        '''
-        return self.__email
-
-
-    def get_archived(self):
-        '''
-        Gets a collection to manipulate archived invoices.
-        @return: Collection
-        '''
-        return self.search(query="location==1")
-
-
-    def get_trashed(self):
-        '''
-        Gets a collection to manipulate trashed invoices.
-        @return: Collection
-        '''
-        return self.search(query="location==2")
-
-
-    def get_unread(self):
-        '''
-        Gets a collection to manipulate unread invoices.
-        @return: Collection
-        '''
-        return self.search(query="read==0")
-
-
-    def get_flagged(self):
-        '''
-        Gets a collection to manipulate flagged invoices.
-        @return: Collection
-        '''
-        return self.search(query="flagged==1")
-
-
-    def get_overdue(self):
-        '''
-        Gets a collection to manipulate overdue invoices.
-        @return: Collection
-        '''
-        return self.search("paid==0|dueDate<<" + datetime.now().isoformat())
-
-
-
-
 class InvoiceBase(Resource):
     '''
     Represent an email address on Greendizer
@@ -509,13 +434,42 @@ class InvoiceBase(Resource):
 
 
 
-class ThreadNodeBase(Node):
+class InvoiceNodeBase(Node):
     '''
-    Represents a node giving access to conversation threads.
+    Represents a node giving access to invoices.
     '''
+    def __init__(self, email, resource_cls=InvoiceBase):
+        '''
+        Initializes a new instance of the InvoiceNode class.
+        @param email:Email Email instance to which the node is tied.
+        @param resource_cls:Class Class with which invoices will be instantiated
+        '''
+        self.__email = email
+        super(InvoiceNodeBase, self).__init__(email.client,
+                                              uri=email.uri + "invoices/",
+                                              resource_cls=resource_cls)
+
+
+    def get_resource_by_id(self, identifier):
+        '''
+        Gets an invoice using its ID.
+        @param identifier:str ID of the invoice.
+        @return: Invoice
+        '''
+        return self._resource_cls(self.__email, identifier)
+
+
+    def get_email(self):
+        '''
+        Gets the email instance to which this node is attached.
+        @return: Email
+        '''
+        return self.__email
+
+
     def get_archived(self):
         '''
-        Gets a collection to manipulate archived threads.
+        Gets a collection to manipulate archived invoices.
         @return: Collection
         '''
         return self.search(query="location==1")
@@ -523,7 +477,7 @@ class ThreadNodeBase(Node):
 
     def get_trashed(self):
         '''
-        Gets a collection to manipulate trashed threads.
+        Gets a collection to manipulate trashed invoices.
         @return: Collection
         '''
         return self.search(query="location==2")
@@ -531,7 +485,7 @@ class ThreadNodeBase(Node):
 
     def get_unread(self):
         '''
-        Gets a collection to manipulate unread threads.
+        Gets a collection to manipulate unread invoices.
         @return: Collection
         '''
         return self.search(query="read==0")
@@ -539,10 +493,18 @@ class ThreadNodeBase(Node):
 
     def get_flagged(self):
         '''
-        Gets a collection to manipulate flagged threads.
+        Gets a collection to manipulate flagged invoices.
         @return: Collection
         '''
         return self.search(query="flagged==1")
+
+
+    def get_overdue(self):
+        '''
+        Gets a collection to manipulate overdue invoices.
+        @return: Collection
+        '''
+        return self.search("paid==0|dueDate<<" + datetime.now().isoformat())
 
 
 
@@ -551,13 +513,6 @@ class ThreadBase(Resource):
     '''
     Represents a conversation thread.
     '''
-    def __init__(self, *args, **kwargs):
-        '''
-        Initializes a new instance of the ThreadBase class.
-        '''
-        super(ThreadBase, self).__init__(*args, **kwargs)
-
-
     @property
     def messagesCount(self):
         '''
@@ -649,19 +604,40 @@ class ThreadBase(Resource):
 
 
 
-class MessageNodeBase(Node):
+class ThreadNodeBase(Node):
     '''
-    Represents an API node giving access to messages.
+    Represents a node giving access to conversation threads.
     '''
-    def __init__(self, thread, message_cls):
+    def get_archived(self):
         '''
-        Initializes a new instance of the MessageNode
-        @param thread: ThreadBase instance.
-        @param resource_cls: Class Message class.
+        Gets a collection to manipulate archived threads.
+        @return: Collection
         '''
-        super(MessageNodeBase, self).__init__(thread.client,
-                                              thread.uri + "messages/",
-                                              message_cls)
+        return self.search(query="location==1")
+
+
+    def get_trashed(self):
+        '''
+        Gets a collection to manipulate trashed threads.
+        @return: Collection
+        '''
+        return self.search(query="location==2")
+
+
+    def get_unread(self):
+        '''
+        Gets a collection to manipulate unread threads.
+        @return: Collection
+        '''
+        return self.search(query="read==0")
+
+
+    def get_flagged(self):
+        '''
+        Gets a collection to manipulate flagged threads.
+        @return: Collection
+        '''
+        return self.search(query="flagged==1")
 
 
 
@@ -715,4 +691,21 @@ class MessageBase(Resource):
         @return: bool
         '''
         return self._get_attribute("sender")
+
+
+
+
+class MessageNodeBase(Node):
+    '''
+    Represents an API node giving access to messages.
+    '''
+    def __init__(self, thread, resource_cls=MessageBase):
+        '''
+        Initializes a new instance of the MessageNode
+        @param thread: ThreadBase instance.
+        @param resource_cls: Class Message class.
+        '''
+        super(MessageNodeBase, self).__init__(thread.client,
+                                              thread.uri + "messages/",
+                                              resource_cls)
 

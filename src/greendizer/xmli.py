@@ -293,7 +293,7 @@ class Invoice(ExtensibleXMLiElement):
         @param value:str
         '''
         if value not in CURRENCIES:
-            raise ValueError("Invalid currency")
+            raise ValueError("Currency code must a valid ISO-4214 string")
 
         self.__currency = value
 
@@ -751,7 +751,8 @@ class Address(XMLiElement):
         @param value:str
         '''
         if value not in COUNTRIES:
-            raise ValueError("Invalid country code.")
+            raise ValueError('''Country code must be a valid ISO 3166-1
+                            alpha-2 string''')
 
         self.__country = value
 

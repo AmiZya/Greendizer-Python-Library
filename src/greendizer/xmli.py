@@ -5,11 +5,51 @@ from datetime import datetime, date
 
 
 
+CURRENCIES = ['AED', 'ALL', 'ANG', 'ARS', 'AUD', 'AWG', 'BBD', 'BDT', 'BGN',
+              'BHD', 'BIF', 'BMD', 'BND', 'BOB', 'BRL', 'BTN', 'BWP', 'BYR',
+              'BZD', 'CAD', 'CHF', 'CLP', 'CNY', 'COP', 'CRC', 'CUP', 'CVE',
+              'CZK', 'DJF', 'DKK', 'DOP', 'DZD', 'ECS', 'EEK', 'EGP', 'ERN',
+              'ETB', 'EUR', 'FJD', 'GBP', 'GHC', 'GIP', 'GMD', 'GNF', 'GTQ',
+              'GYD', 'HKD', 'HNL', 'HRK', 'HTG', 'HUF', 'IDR', 'ILS', 'INR',
+              'IQD', 'IRR', 'ISK', 'JMD', 'JOD', 'JPY', 'KES', 'KHR', 'KMF',
+              'KPW', 'KRW', 'KWD', 'KYD', 'KZT', 'LAK', 'LBP', 'LKR', 'LRD',
+              'LSL', 'LTL', 'LVL', 'LYD', 'MAD', 'MDL', 'MKD', 'MLT', 'MMK',
+              'MNT', 'MOP', 'MRO', 'MUR', 'MVR', 'MWK', 'MXN', 'MYR', 'NAD',
+              'NGN', 'NIO', 'NOK', 'NPR', 'NZD', 'OMR', 'PAB', 'PEN', 'PGK',
+              'PHP', 'PKR', 'PLN', 'PYG', 'QAR', 'RON', 'RUB', 'RWF', 'SAR',
+              'SBD', 'SCR', 'SDG', 'SEK', 'SGD', 'SHP', 'SIT', 'SKK', 'SLL',
+              'SOS', 'STD', 'SVC', 'SYP', 'SZL', 'THB', 'TND', 'TOP', 'TRY',
+              'TTD', 'TWD', 'TZS', 'UAH', 'UGX', 'USD', 'UYU', 'VEB', 'VND',
+              'VUV', 'WST', 'XAF', 'XAG', 'XCD', 'XCP', 'XOF', 'XPD', 'XPF',
+              'XPT', 'YER', 'ZAR', 'ZMK', 'ZWD']
 INVOICE_DUE = "due"
 INVOICE_PAID = "paid"
 INVOICE_CANCELED = "canceled"
 RATE_TYPE_FIXED = "fixed"
 RATE_TYPE_PERCENTAGE = "percentage"
+COUNTRIES = ["AF", "AX", "AL", "DZ", "AS", "AD", "AO", "AI", "AQ", "AG", "AR",
+             "AM", "AW", "AU", "AT", "AZ", "BS", "BH", "BD", "BB", "BY", "BE",
+             "BZ", "BJ", "BM", "BT", "BO", "BA", "BW", "BV", "BR", "IO", "BN",
+             "BG", "BF", "BI", "KH", "CM", "CA", "CV", "KY", "CF", "TD", "CL",
+             "CN", "CX", "CC", "CO", "KM", "CG", "CD", "CK", "CR", "CI", "HR",
+             "CU", "CY", "CZ", "DK", "DJ", "DM", "DO", "EC", "EG", "SV", "GQ",
+             "ER", "EE", "ET", "FK", "FO", "FJ", "FI", "FR", "GF", "PF", "TF",
+             "GA", "GM", "GE", "DE", "GH", "GI", "GR", "GL", "GD", "GP", "GU",
+             "GT", "GG", "GN", "GW", "GY", "HT", "HM", "HN", "HK", "HU", "IS",
+             "IN", "ID", "IR", "IQ", "IE", "IM", "IL", "IT", "JM", "JP", "JE",
+             "JO", "KZ", "KE", "KI", "KW", "KG", "LA", "LV", "LB", "LS", "LR",
+             "LY", "LI", "LT", "LU", "MO", "MK", "MG", "MW", "MY", "MV", "ML",
+             "MT", "MH", "MQ", "MR", "MU", "YT", "MX", "FM", "MD", "MC", "MN",
+             "ME", "MS", "MA", "MZ", "MM", "NA", "NR", "NP", "NL", "AN", "NC",
+             "NZ", "NI", "NE", "NG", "NU", "NF", "MP", "KP", "NO", "OM", "PK",
+             "PW", "PS", "PA", "PG", "PY", "PE", "PH", "PN", "PL", "PT", "PR",
+             "QA", "RE", "RO", "RU", "RW", "SH", "KN", "LC", "PM", "VC", "WS",
+             "SM", "ST", "SA", "SN", "RS", "CS", "SC", "SL", "SG", "SK", "SI",
+             "SB", "SO", "ZA", "GS", "KR", "ES", "LK", "SD", "SR", "SJ", "SZ",
+             "SE", "CH", "SY", "TW", "TJ", "TZ", "TH", "TL", "TG", "TK", "TO",
+             "TT", "TN", "TR", "TM", "TC", "TV", "UG", "UA", "AE", "GB", "US",
+             "UM", "UY", "UZ", "VU", "VA", "VE", "VN", "VG", "VI", "WF", "YE",
+             "ZM", "ZW"]
 
 
 
@@ -173,8 +213,12 @@ class Invoice(ExtensibleXMLiElement):
     '''
     Represents an Invoice object in the XMLi.
     '''
-    def __init__(self, name=None, description="", currency=None, status="paid",
-                 date=date.today(), due_date=date.today(), custom_id=None,
+    __date = None
+    __due_date = None
+
+
+    def __init__(self, name=None, description=None, currency=None, status="paid",
+                 date=datetime.now(), due_date=date.today(), custom_id=None,
                  terms=None):
         '''
         Initializes a new instance of the Invoice class.
@@ -182,7 +226,7 @@ class Invoice(ExtensibleXMLiElement):
         @param description:str Invoice description.
         @param currency:str Currency
         @param status:str Invoice status.
-        @param date:date Invoice date.
+        @param date:datetime Invoice date.
         @param due_date:date Invoice's due date.
         '''
         self.name = name
@@ -194,6 +238,64 @@ class Invoice(ExtensibleXMLiElement):
         self.custom_id = custom_id
         self.terms = terms
         self.__groups = []
+
+
+    def __set_name(self, value):
+        '''
+        Sets the name of the invoice.
+        @param value:str
+        '''
+        if not value or not len(value):
+            raise ValueError("Invalid invoice name")
+
+        self.__name = value
+
+
+    def __set_status(self, value):
+        '''
+        Sets the status of the invoice.
+        @param value:str
+        '''
+        if value not in [INVOICE_DUE, INVOICE_PAID, INVOICE_CANCELED]:
+            raise ValueError("Invalid invoice status")
+
+        self.__status = value
+
+
+    def __set_date(self, value):
+        '''
+        Sets the invoice date.
+        @param value:datetime
+        '''
+        if value > datetime.now():
+            raise ValueError("Date cannot be in the future.")
+
+        if self.__due_date and value > self.__due_date:
+            raise ValueError("Date cannot be posterior to the due date.")
+
+        self.__date = value
+
+
+    def __set_due_date(self, value):
+        '''
+        Sets the due date of the invoice.
+        @param value:date
+        '''
+        if self.__date and value < self.__date:
+            raise ValueError("Due date cannot be anterior to the invoice date.")
+
+        self.__due_date = value
+
+
+    def __set_currency(self, value):
+        '''
+        Sets the currency of the invoice.
+        @param value:str
+        '''
+        if value not in CURRENCIES:
+            raise ValueError("Invalid currency")
+
+        self.__currency = value
 
 
     @property
@@ -223,6 +325,13 @@ class Invoice(ExtensibleXMLiElement):
         return fsum([group.total for group in self.__groups])
 
 
+    name = property(lambda self: self.__name, __set_name)
+    status = property(lambda self: self.__status, __set_status)
+    currency = property(lambda self: self.__currency, __set_currency)
+    date = property(lambda self: self.__date, __set_date)
+    due_date = property(lambda self: self.__due_date, __set_due_date)
+
+
     def to_xml(self):
         '''
         Returns a DOM element containing the XML representation of the invoice
@@ -234,8 +343,8 @@ class Invoice(ExtensibleXMLiElement):
         self._create_text_node(root, "description", self.description, True)
         self._create_text_node(root, "currency", self.currency)
         self._create_text_node(root, "status", self.status)
-        self._create_text_node(root, "date", self.date)
-        self._create_text_node(root, "dueDate", self.due_date)
+        self._create_text_node(root, "date", self.date.isoformat())
+        self._create_text_node(root, "dueDate", self.due_date.isoformat())
         self._create_text_node(root, "customId", self.custom_id, True)
         self._create_text_node(root, "terms", self.terms, True)
         self._create_text_node(root, "total", self.total)
@@ -268,6 +377,17 @@ class Group(ExtensibleXMLiElement):
         self.__lines = []
 
 
+    def __set_name(self, value):
+        '''
+        Sets the group's name.
+        @param value:str
+        '''
+        if not value or not len(value):
+            raise ValueError("Invalid group name.")
+
+        self.__name = value
+
+
     @property
     def total_discounts(self):
         '''
@@ -295,6 +415,9 @@ class Group(ExtensibleXMLiElement):
         return fsum([line.total for line in self.__lines])
 
 
+    name = property(lambda self: self.__name, __set_name)
+
+
     def to_xml(self):
         '''
         Returns a DOM representation of the group.
@@ -316,13 +439,15 @@ class Line(ExtensibleXMLiElement):
     Represents an invoice body line.
     '''
     def __init__(self, name=None, description="", unit=None, quantity=0,
-                 unit_price=0, gin=None, gtin=None, sscc=None):
+                 date=datetime.now(), unit_price=0, gin=None, gtin=None,
+                 sscc=None):
         '''
         Initializes a new instance of the Line class.
         '''
         self.name = name
         self.description = description
         self.quantity = quantity
+        self.date = date
         self.unit_price = unit_price
         self.unit = unit
         self.gin = gin
@@ -330,6 +455,50 @@ class Line(ExtensibleXMLiElement):
         self.sscc = sscc
         self.__taxes = []
         self.__discounts = []
+
+
+    def __set_name(self, value):
+        '''
+        Sets the line's product or service name.
+        @param value:str
+        '''
+        if not value or not len(value):
+            raise ValueError("Invalid product or service name")
+
+        self.__name = value
+
+
+    def __set_unit(self, value):
+        '''
+        Sets the unit of the line.
+        @param value:str
+        '''
+        if not value or not len(value):
+            raise ValueError("Invalid unit.")
+
+        self.__unit = value
+
+
+    def __set_quantity(self, value):
+        '''
+        Sets the quantity
+        @param value:str
+        '''
+        try:
+            self.__quantity = float(value)
+        except ValueError:
+            raise ValueError("Quantity must be a number")
+
+
+    def __set_unit_price(self, value):
+        '''
+        Sets the unit price
+        @param value:str
+        '''
+        try:
+            self.__unit_price = float(value)
+        except ValueError:
+            raise ValueError("Unit Price must be a number")
 
 
     @property
@@ -369,6 +538,12 @@ class Line(ExtensibleXMLiElement):
         return self.gross + self.total_taxes - self.total_discounts
 
 
+    name = property(lambda self: self.__name, __set_name)
+    unit = property(lambda self: self.__unit, __set_unit)
+    quantity = property(lambda self: self.__quantity, __set_quantity)
+    unit_price = property(lambda self: self.__unit_price, __set_unit_price)
+
+
     def to_xml(self):
         '''
         Returns a DOM representation of the line.
@@ -376,6 +551,7 @@ class Line(ExtensibleXMLiElement):
         '''
         doc = Document()
         root = doc.createElement("line")
+        self._create_text_node(root, "date", self.date.isoformat())
         self._create_text_node(root, "name", self.name, True)
         self._create_text_node(root, "description", self.description, True)
         self._create_text_node(root, "quantity", self.quantity)
@@ -413,6 +589,44 @@ class Treatment(XMLiElement):
         self.rate_type = rate_type
 
 
+    def __set_name(self, value):
+        '''
+        Sets the name of the treatment.
+        @param value:str
+        '''
+        if not value or not len(value):
+            raise ValueError("Invalid name.")
+
+        self.__name = value
+
+
+    def __set_rate_type(self, value):
+        '''
+        Sets the rate type.
+        @param value:str
+        '''
+        if value not in [RATE_TYPE_FIXED, RATE_TYPE_PERCENTAGE]:
+            raise ValueError("Invalid rate type.")
+
+        self.__rate_type = value
+
+
+    def __set_rate(self, value):
+        '''
+        Sets the rate.
+        @param value:float
+        '''
+        try:
+            self.__rate = float(value)
+        except ValueError:
+            raise ValueError("Invalid value.")
+
+
+    name = property(lambda self: self.__name, __set_name)
+    rate = property(lambda self: self.__rate, __set_rate)
+    rate_type = property(lambda self: self.__rate_type, __set_rate_type)
+
+
     def compute(self, base):
         '''
         Computes the amount of the treatment.
@@ -425,8 +639,8 @@ class Treatment(XMLiElement):
         if self.rate_type == RATE_TYPE_FIXED:
             if not self.interval or base < self.interval.lower:
                 return self.rate
-
-            return 0
+            else:
+                return 0
 
         if not self.interval:
             return base * self.rate / 100
@@ -529,6 +743,20 @@ class Address(XMLiElement):
         self.zipcode = zipcode
         self.state = state
         self.country = country
+
+
+    def __set_country(self, value):
+        '''
+        Sets the country
+        @param value:str
+        '''
+        if value not in COUNTRIES:
+            raise ValueError("Invalid country code.")
+
+        self.__country = value
+
+
+    country = property(lambda self: self.__country, __set_country)
 
 
     def to_xml(self, name="address"):

@@ -427,33 +427,6 @@ class ThreadNode(ThreadNodeBase):
         return self.__seller
 
 
-    def open_thread(self, recipient, subject, message):
-        '''
-        Opens a new thread.
-        @param recipient:str ID of the recipient
-        @param subject:str Subject of the thread
-        @param message:str Message
-        '''
-        if is_empty_or_none(recipient):
-            raise ValueError("Invalid recipient")
-
-        if is_empty_or_none(subject):
-            raise ValueError("Invalid subject")
-
-        if is_empty_or_none(message):
-            raise ValueError("Invalid message")
-
-        data = {"recipient":recipient, "subject":subject, "message":message}
-        request = Request(self.__seller.client, method="POST",
-                          uri=self.get_uri(), data=data)
-
-        response = request.get_response()
-        if response.get_status_code() == 201:
-            thread_id = extract_id_from_uri(response["Location"])
-            thread = self._resource_cls(self.__seller, thread_id)
-            thread.sync(response.data, response["Etag"])
-
-
 
 
 class Thread(ThreadBase):

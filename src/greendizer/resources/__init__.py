@@ -1,6 +1,8 @@
 import hashlib
 from datetime import datetime
+from greendizer.base import is_empty_or_none, extract_id_from_uri
 from greendizer.dal import Resource, Node
+from greendizer.http import Request
 
 
 
@@ -467,7 +469,8 @@ class InvoiceNodeBase(Node):
         return self.__email
 
 
-    def get_archived(self):
+    @property
+    def archived(self):
         '''
         Gets a collection to manipulate archived invoices.
         @return: Collection
@@ -475,7 +478,8 @@ class InvoiceNodeBase(Node):
         return self.search(query="location==1")
 
 
-    def get_trashed(self):
+    @property
+    def trashed(self):
         '''
         Gets a collection to manipulate trashed invoices.
         @return: Collection
@@ -483,28 +487,32 @@ class InvoiceNodeBase(Node):
         return self.search(query="location==2")
 
 
-    def get_unread(self):
+    @property
+    def unread(self):
         '''
         Gets a collection to manipulate unread invoices.
         @return: Collection
         '''
-        return self.search(query="read==0")
+        return self.search(query="read==0|location<<2")
 
 
-    def get_flagged(self):
+    @property
+    def flagged(self):
         '''
         Gets a collection to manipulate flagged invoices.
         @return: Collection
         '''
-        return self.search(query="flagged==1")
+        return self.search(query="flagged==1|location<<2")
 
 
-    def get_overdue(self):
+    @property
+    def overdue(self):
         '''
         Gets a collection to manipulate overdue invoices.
         @return: Collection
         '''
-        return self.search("paid==0|dueDate<<" + datetime.now().isoformat())
+        return self.search("paid==0|location<<2|dueDate<<"
+                           + datetime.now().isoformat())
 
 
 
@@ -608,7 +616,17 @@ class ThreadNodeBase(Node):
     '''
     Represents a node giving access to conversation threads.
     '''
-    def get_archived(self):
+    @property
+    def inbox(self):
+        '''
+        Gets a collection to manipulate threads in the inbox.
+        @return: Collection
+        '''
+        return self.search(query="location==0")
+
+
+    @property
+    def archived(self):
         '''
         Gets a collection to manipulate archived threads.
         @return: Collection
@@ -616,7 +634,8 @@ class ThreadNodeBase(Node):
         return self.search(query="location==1")
 
 
-    def get_trashed(self):
+    @property
+    def trashed(self):
         '''
         Gets a collection to manipulate trashed threads.
         @return: Collection
@@ -624,20 +643,49 @@ class ThreadNodeBase(Node):
         return self.search(query="location==2")
 
 
-    def get_unread(self):
+    @property
+    def unread(self):
         '''
         Gets a collection to manipulate unread threads.
         @return: Collection
         '''
-        return self.search(query="read==0")
+        return self.search(query="read==0|location<<2")
 
 
-    def get_flagged(self):
+    @property
+    def flagged(self):
         '''
         Gets a collection to manipulate flagged threads.
         @return: Collection
         '''
-        return self.search(query="flagged==1")
+        return self.search(query="flagged==1|location<<2")
+
+
+    def open(self, recipient_id, subject, message):
+        '''
+        Opens a new conversation thread.
+        @param recipient:str ID of the recipient
+        @param subject:str Subject of the thread
+        @param message:str Message
+        '''
+        if is_empty_or_none(recipient_id):
+            raise ValueError("Invalid recipient ID")
+
+        if is_empty_or_none(subject):
+            raise ValueError("Invalid subject")
+
+        if is_empty_or_none(message):
+            raise ValueError("Invalid message")
+
+        data = {"recipient":recipient_id, "subject":subject, "message":message}
+        request = Request(self.__seller.client, method="POST",
+                          uri=self.get_uri(), data=data)
+
+        response = request.get_response()
+        if response.get_status_code() == 201:
+            thread_id = extract_id_from_uri(response["Location"])
+            thread = self.get_resource_by_id(thread_id)
+            thread.sync(response.data, response["Etag"])
 
 
 
@@ -684,13 +732,13 @@ class MessageBase(Resource):
 
 
     @property
-    def is_from_current_user(self):
+    def sender(self):
         '''
         Gets a value indicating whether the message has been sent by the
         currently authenticated user.
         @return: bool
         '''
-        return self._get_attribute("sender")
+        return self._get_attribute("sender") is not None
 
 
 

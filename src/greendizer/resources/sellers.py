@@ -4,8 +4,8 @@ from greendizer.base import Address, is_empty_or_none, extract_id_from_uri
 from greendizer.http import Request
 from greendizer.dal import Resource, Node
 from greendizer.resources import (User, EmailBase, InvoiceBase, ThreadBase,
-                                  MessageBase, InvoiceNodeBase, ThreadNodeBase,
-                                  MessageNodeBase)
+                                  MessageBase, HistoryBase, InvoiceNodeBase,
+                                  ThreadNodeBase, MessageNodeBase)
 
 
 class Seller(User):
@@ -506,7 +506,7 @@ class BuyerNode(Node):
 
 
 
-class Buyer(Resource):
+class Buyer(HistoryBase):
     '''
     Represents a customer of the seller.
     '''
@@ -518,24 +518,6 @@ class Buyer(Resource):
         self.__address = None
         self.__delivery_address = None
         super(Buyer, self).__init__(seller.client, identifier)
-
-
-    def __getitem__(self, currency_code):
-        '''
-        Gets stats about the exchanges made with a specific currency.
-        @param currency_code:str 3 letters ISO Currency code.
-        @return: dict
-        '''
-        return self.get_currency_stats(currency_code)
-
-
-    def get_currency_stats(self, currency_code):
-        '''
-        Gets stats about the exchanges made with a specific currency.
-        @param currency_code:str 3 letters ISO Currency code.
-        @return: dict
-        '''
-        return self._get_attribute(currency_code.upper())
 
 
     @property
@@ -587,39 +569,3 @@ class Buyer(Resource):
         @return: str
         '''
         return "%sbuyers/%s/" % (self.__seller.uri, self.id)
-
-
-    @property
-    def currencies(self):
-        '''
-        Gets the list of currencies used.
-        @return: list
-        '''
-        return self._get_attribute("currencies")
-
-
-    @property
-    def invoices_count(self):
-        '''
-        Gets the number of invoices exchanged.
-        @return: int
-        '''
-        return self._get_attribute("invoicesCount")
-
-
-    @property
-    def threads_count(self):
-        '''
-        Gets the number of threads opened.
-        @return: int
-        '''
-        return self._get_attribute("threadsCount")
-
-
-    @property
-    def messages_count(self):
-        '''
-        Gets the number of messages exchanged.
-        @return: int
-        '''
-        return self._get_attribute("messagesCount")

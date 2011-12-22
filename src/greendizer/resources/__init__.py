@@ -709,3 +709,64 @@ class MessageNodeBase(Node):
                                               thread.uri + "messages/",
                                               resource_cls)
 
+
+
+class HistoryBase(Resource):
+    '''
+    Represents a resource holding a history for different currencies.
+    '''
+    def __getitem__(self, currency_code):
+        '''
+        Gets stats about the exchanges made with a specific currency.
+        @param currency_code:str 3 letters ISO Currency code.
+        @return: dict
+        '''
+        return self.get_currency_stats(currency_code)
+
+
+    def get_currency_stats(self, currency_code):
+        '''
+        Gets stats about the exchanges made with a specific currency.
+        @param currency_code:str 3 letters ISO Currency code.
+        @return: dict
+        '''
+        return self._get_attribute(currency_code.upper())
+
+
+    @property
+    def currencies(self):
+        '''
+        Gets the list of currencies used.
+        @return: list
+        '''
+        return self._get_attribute("currencies")
+
+
+    @property
+    def invoices_count(self):
+        '''
+        Gets the number of invoices exchanged.
+        @return: int
+        '''
+        return self._get_attribute("invoicesCount")
+
+
+    @property
+    def threads_count(self):
+        '''
+        Gets the number of threads opened.
+        @return: int
+        '''
+        return self._get_attribute("threadsCount")
+
+
+    @property
+    def messages_count(self):
+        '''
+        Gets the number of messages exchanged.
+        @return: int
+        '''
+        return self._get_attribute("messagesCount")
+
+
+

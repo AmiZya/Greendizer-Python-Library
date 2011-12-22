@@ -121,6 +121,15 @@ class InvoiceNode(InvoiceNodeBase):
         super(InvoiceNode, self).__init__(email, Invoice)
 
 
+    @property
+    def outbox(self):
+        '''
+        Gets a collection to manipulate the invoices in the outbox.
+        @return: Collection
+        '''
+        return self.search(query="location==0")
+
+
     def send(self, xmli):
         '''
         Sends an invoice

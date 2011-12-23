@@ -1,8 +1,8 @@
 import urllib
-import time
 from datetime import datetime, date
-from greendizer.base import is_empty_or_none, timestamp_to_datetime
 from greendizer.http import Request, Etag, Range, ApiException
+from greendizer.base import (is_empty_or_none, timestamp_to_datetime,
+                             datetime_to_timestamp)
 
 
 
@@ -77,8 +77,8 @@ class Resource(object):
         self.__client = client
         self.__id = identifier or "0"
         self.__last_modified = datetime(1970, 1, 1)
-        self.__rawData = {}
-        self.__rawUpdates = {}
+        self.__raw_data = {}
+        self.__raw_updates = {}
         self.__deleted = False
 
 
@@ -103,10 +103,10 @@ class Resource(object):
         if self.__deleted:
             raise ResourceDeletedException()
 
-        if len(self.__rawData) == 0: #Lazy loading
+        if not len(self.__raw_data): # What a lazy ass...
             self.load()
 
-        return self.__rawData.get(name, None)
+        return self.__raw_data.get(name, None)
 
 
     def _set_attribute(self, name, value):
@@ -120,11 +120,10 @@ class Resource(object):
             raise ResourceDeletedException()
 
         if isinstance(value, datetime) or isinstance(value, date):
-            value = (time.mktime(value.utctimetuple()) * 1000
-                    + value.microsecond / 1000)
+            value = str(datetime_to_timestamp(value))
 
-        if self.__rawData.get(name, None) != value:
-            self.__rawData[name] = value
+        if self.__raw_data.get(name, None) != value:
+            self.__raw_data[name] = value
             return True
 
         return False
@@ -139,8 +138,32 @@ class Resource(object):
         if self.__deleted:
             raise ResourceDeletedException()
 
-        if self.__rawData.get(attribute, None) != value:
-            self.__rawUpdates[attribute] = value
+        if self.__raw_data.get(attribute, None) != value:
+            self.__raw_updates[attribute] = value
+
+
+    @property
+    def exists(self):
+        '''
+        Gets a value indicating whether the current resource exists on the
+        server.
+        @return: bool
+        '''
+        if self.__deleted:
+            return False
+
+        if len(self.__raw_data):
+            return True
+
+        try:
+            self.load_info()
+        except(ApiException), e:
+            if e.code == 404:
+                return False
+
+            raise e
+
+        return True
 
 
     @property
@@ -203,9 +226,6 @@ class Resource(object):
         @param data:dict New representation
         @return: bool A value indicating whether the representation has changed.
         '''
-        if not len(data):
-            return
-
         self.__last_modified = etag.last_modified
         self.__id = etag.id
 
@@ -219,20 +239,32 @@ class Resource(object):
         return changed
 
 
-    def load(self):
+    def load_info(self):
+        '''
+        Loads the headers of the resource.
+        '''
+        self.load(True)
+
+
+    def load(self, head=False):
         '''
         Loads the resource.
+        @param head:bool A value indicating whether to use the HEAD HTTP
+        method.
         '''
         if self.__deleted:
             raise ResourceDeletedException()
 
-        request = Request(self.__client, uri=self.uri)
-        request["If-Match"] = self.etag
-        request["If-Unmodified-Since"] = self.etag.last_modified
+        request = Request(self.__client, uri=self.uri,
+                          method=("HEAD" if head else "GET"))
+
+        if len(self.__raw_data):
+            request["If-Match"] = self.etag
+            request["If-Unmodified-Since"] = self.etag.last_modified
 
         response = request.get_response()
         if response.status_code == 200:
-            self.sync(response.data, response["Etag"])
+            self.sync({} if head else response.data, response["Etag"])
 
 
     def update(self, prevent_conflicts=False):
@@ -245,11 +277,11 @@ class Resource(object):
         if self.__deleted:
             raise ResourceDeletedException()
 
-        if len(self.__rawUpdates) == 0:
+        if len(self.__raw_updates) == 0:
             return
 
         request = Request(self.__client, method="PATCH",
-                          uri=self.uri, data=self.__rawUpdates)
+                          uri=self.uri, data=self.__raw_updates)
 
         if prevent_conflicts:
             request["If-Match"] = self.etag
@@ -260,8 +292,8 @@ class Resource(object):
             raise ResourceConflictException(self, "PATCH")
 
         if response.status_code == 204: #No-Content
-            self.sync(self.__rawUpdates, response["Etag"])
-            self.__rawUpdates = {}
+            self.sync(self.__raw_updates, response["Etag"])
+            self.__raw_updates = {}
 
 
     def delete(self, prevent_conflicts=False):
@@ -286,8 +318,8 @@ class Resource(object):
 
         if response.status_code == 204: #No-Content
             self.__deleted = True
-            self.__rawData = {}
-            self.__rawUpdates = {}
+            self.__raw_data = {}
+            self.__raw_updates = {}
 
 
 

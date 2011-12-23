@@ -3,7 +3,8 @@ import urllib, urllib2
 import simplejson
 import re
 import zlib
-from datetime import datetime, date
+from math import modf
+from datetime import datetime, date, timedelta
 from gzip import GzipFile
 from StringIO import StringIO
 from greendizer.base import is_empty_or_none
@@ -314,6 +315,16 @@ class Etag(object):
 
 
     @property
+    def timestamp(self):
+        '''
+        Gets the timestamp of the last modification date.
+        @return: long
+        '''
+        return (self.__last_modified.strftime("%s") +
+                str(self.__last_modified.time().microsecond / 1000))
+
+
+    @property
     def id(self):
         '''
         Gets the ID of the resource.
@@ -327,9 +338,7 @@ class Etag(object):
         Returns a string representation of the Etag
         @return: str
         '''
-        timestamp = (time.mktime(self.__last_modified.utctimetuple()) * 1000
-                    + self.__last_modified.microsecond / 1000)
-        return "%s-%s" % (timestamp, self.__id)
+        return "%s-%s" % (self.timestamp, self.__id)
 
 
     @classmethod
@@ -343,9 +352,10 @@ class Etag(object):
             return
 
         parts = raw.split("-")
-        return cls(datetime.fromtimestamp(int(parts[0]) / 1000), parts[1])
-
-
+        f, i = modf(long(parts[0]) / float(1000))
+        return cls(datetime.fromtimestamp(i) +
+                   timedelta(milliseconds=f * 1000),
+                   parts[1])
 
 
 class Range(object):

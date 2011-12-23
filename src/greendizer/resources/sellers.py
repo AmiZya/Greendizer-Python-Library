@@ -74,14 +74,14 @@ class EmailNode(Node):
                                         Email)
 
 
-    def get(self, identifier, default=None):
+    def get(self, identifier, default=None, **kwargs):
         '''
         Gets an email by its ID.
         @param identifier:str ID of the email address.
         @return: Email
         '''
         return super(EmailNode, self).get(self.__seller, identifier,
-                                          default=default)
+                                          default=default, **kwargs)
 
 
 
@@ -253,14 +253,14 @@ class InvoiceReportNode(Node):
                                                 InvoiceReport)
 
 
-    def get(self, identifier, default=None):
+    def get(self, identifier, default=None, **kwargs):
         '''
         Gets an invoice report by its ID.
         @param identifier:str ID of the invoice report.
         @return: InvoiceReport
         '''
         return super(InvoiceReportNode, self).get(self.__email, identifier,
-                                                  default=default)
+                                                  default=default, **kwargs)
 
 
 
@@ -411,14 +411,14 @@ class ThreadNode(ThreadNodeBase):
                                          Thread)
 
 
-    def get(self, identifier, default=None):
+    def get(self, identifier, default=None, **kwargs):
         '''
         Gets a thread by its ID.
         @param identifier:str ID of the thread.
         @return: Thread.
         '''
         return super(ThreadNode, self).get(self.__seller, identifier,
-                                           default=None)
+                                           default=default, **kwargs)
 
 
     @property
@@ -480,14 +480,14 @@ class BuyerNode(Node):
         super(BuyerNode, self).__init__(seller, seller.uri + "buyers/", Buyer)
 
 
-    def get(self, identifier, default=None):
+    def get(self, identifier, default=None, **kwargs):
         '''
         Gets a buyer by its ID.
         @param identifier:ID of the buyer.
         @return: Buyer
         '''
         return super(BuyerNode, self).get(self.__seller, identifier,
-                                          default=None)
+                                          default=default, **kwargs)
 
 
 

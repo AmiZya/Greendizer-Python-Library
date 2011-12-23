@@ -18,16 +18,6 @@ class User(Resource):
         super(User, self).__init__(client, "me")
         self.__company = Employer(self)
         self.__settings = Settings(self)
-        self.__emailNode = Node(client, self.uri + "emails/", None)
-
-
-    @property
-    def emails(self):
-        '''
-        Gets access to the email addresses attached to this user.
-        @return: Node
-        '''
-        return self.__emailNode
 
 
     @property
@@ -450,15 +440,14 @@ class InvoiceNodeBase(Node):
                                               resource_cls=resource_cls)
 
 
-    def get(self, identifier, default=None):
+    def get(self, identifier, default=None, **kwargs):
         '''
         Gets an invoice using its ID.
         @param identifier:str ID of the invoice.
         @return: Invoice
         '''
-        super(InvoiceNodeBase, self).get(self.__email,
-                                                        identifier,
-                                                        default=None)
+        return super(InvoiceNodeBase, self).get(self.__email, identifier,
+                                                default=None, **kwargs)
 
 
     @property

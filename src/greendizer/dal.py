@@ -495,28 +495,32 @@ class Node(object):
         @param identifier:str ID of the resource
         @return: Resource
         '''
-        return self.get_resource_by_id(identifier)
+        return self.get(identifier, check_existence=False)
 
 
-    def get(self, default=None, *args, **kwargs):
+    def get(self, *args, **kwargs):
         '''
         Gets a resource by its ID.
-        @param identifier:str ID of the resource
         @return: Resource
         '''
         if not self._resource_cls:
             raise NotImplementedError()
 
+        params = [ (k, v) for k, v in kwargs.items()
+                  if k not in ['default', 'check_existence']]
+        instance = self._resource_cls(*args, **dict(params))
+
+        if not kwargs.get('check_existence', True) or 'default' not in kwargs:
+            return instance
+
         try:
-            instance = self._resource_cls(*args, **kwargs)
             instance.load()
+            return instance
         except (ApiException), e:
             if e.code == 404:
-                return default
+                return kwargs.get("default", None)
 
             raise e
-
-        return instance
 
 
     @property

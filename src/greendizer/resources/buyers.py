@@ -51,7 +51,7 @@ class Email(EmailBase):
         @param identifier:str ID of the email.
         '''
         self.__user = user
-        super(Email, self).__init__(user.client, identifier)
+        super(Email, self).__init__(user, identifier)
         self.__invoiceNode = InvoiceNodeBase(self)
         self.__threadNode = ThreadNode(self)
         self.__sellerNode = SellerNode(self)
@@ -103,13 +103,14 @@ class EmailNode(Node):
                                         Email)
 
 
-    def get(self, identifier, default=None):
+    def get(self, identifier, default=None, **kwargs):
         '''
         Gets an email address by its ID.
         @param identifier:str ID of the email address.
         @return: Email
         '''
-        super(EmailNode, self).get(self.__user, identifier, default=None)
+        return super(EmailNode, self).get(self.__user, identifier,
+                                          default=default, **kwargs)
 
 
 
@@ -144,13 +145,14 @@ class InvoiceNode(InvoiceNodeBase):
         super(InvoiceNode, self).__init__(email, Invoice)
 
 
-    def get(self, identifier, default=None):
+    def get(self, identifier, default=None, **kwargs):
         '''
         Gets an invoice by its ID.
         @param identifier:str ID of the invoice.
         @return: Invoice
         '''
-        super(InvoiceNode, self).get(self.__email, identifier, default=None)
+        return super(InvoiceNode, self).get(self.__email, identifier,
+                                            default=default, **kwargs)
 
 
 
@@ -216,13 +218,14 @@ class ThreadNode(ThreadNodeBase):
                                          Thread)
 
 
-    def get(self, identifier, default=None):
+    def get(self, identifier, default=None, **kwargs):
         '''
         Gets a thread by its ID.
         @param identifier:str ID of the thread.
         @return: str
         '''
-        super(ThreadNode, self).get(self.__email, identifier, default=None)
+        return super(ThreadNode, self).get(self.__email, identifier,
+                                           default=default, **kwargs)
 
 
 
@@ -304,13 +307,14 @@ class SellerNode(Node):
                                         Seller)
 
 
-    def get(self, identifier, default=None):
+    def get(self, identifier, default=None, **kwargs):
         '''
         Gets the history of a specific seller
         @param identifier:str ID of the seller.
         @return: Seller
         '''
-        super(SellerNode, self).get(self.__email, identifier, default=None)
+        return super(SellerNode, self).get(self.__email, identifier,
+                                           default=default, **kwargs)
 
 
     @property

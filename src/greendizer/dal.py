@@ -2,7 +2,7 @@ import urllib
 import time
 from datetime import datetime, date
 from greendizer.base import is_empty_or_none, timestamp_to_datetime
-from greendizer.http import Request, Etag, Range
+from greendizer.http import Request, Etag, Range, ApiException
 
 
 
@@ -466,7 +466,7 @@ class Node(object):
         return self.get_resource_by_id(identifier)
 
 
-    def get_resource_by_id(self, identifier):
+    def get(self, default=None, *args, **kwargs):
         '''
         Gets a resource by its ID.
         @param identifier:str ID of the resource
@@ -475,7 +475,16 @@ class Node(object):
         if not self._resource_cls:
             raise NotImplementedError()
 
-        return self._resource_cls(self.__client, identifier)
+        try:
+            instance = self._resource_cls(*args, **kwargs)
+            instance.load()
+        except (ApiException), e:
+            if e.code == 404:
+                return default
+
+            raise e
+
+        return instance
 
 
     @property

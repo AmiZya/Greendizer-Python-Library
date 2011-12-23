@@ -81,7 +81,7 @@ class User(Resource):
         Gets the URL of the user's profile picture
         @return: str
         '''
-        return self._get_attribute_value("avatar")
+        return self._get_attribute("avatar")
 
 
     @property

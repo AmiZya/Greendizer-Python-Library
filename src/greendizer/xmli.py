@@ -25,6 +25,9 @@ CURRENCIES = ['AED', 'ALL', 'ANG', 'ARS', 'AUD', 'AWG', 'BBD', 'BDT', 'BGN',
 INVOICE_DUE = "due"
 INVOICE_PAID = "paid"
 INVOICE_CANCELED = "canceled"
+UNITS = ['BO', 'CL', 'CMK', 'CMQ', 'CM', 'CT', 'DL', 'DM', 'E4', 'CQ',
+             'GAL', 'GRM', 'TB', 'HUR', 'KGM', 'KM', 'LTR', 'MGM', 'MLT',
+             'MMT', 'MTK', 'MTR', 'NT', 'PK', 'RO', 'TNE', 'ZZ']
 RATE_TYPE_FIXED = "fixed"
 RATE_TYPE_PERCENTAGE = "percentage"
 COUNTRIES = ["AF", "AX", "AL", "DZ", "AS", "AD", "AO", "AI", "AQ", "AG", "AR",
@@ -475,6 +478,9 @@ class Line(ExtensibleXMLiElement):
         '''
         if not value or not len(value):
             raise ValueError("Invalid unit.")
+
+        if value in UNITS:
+            value = value.upper()
 
         self.__unit = value
 

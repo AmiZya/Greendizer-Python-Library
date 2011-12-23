@@ -1,7 +1,7 @@
 import urllib
 import time
 from datetime import datetime, date
-from greendizer.base import is_empty_or_none
+from greendizer.base import is_empty_or_none, timestamp_to_datetime
 from greendizer.http import Request, Etag, Range
 
 
@@ -91,7 +91,7 @@ class Resource(object):
         '''
         value = self._get_attribute(name)
         if value:
-            return datetime.fromtimestamp(value / 1000)
+            return timestamp_to_datetime(value)
 
 
     def _get_attribute(self, name):

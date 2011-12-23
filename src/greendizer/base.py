@@ -1,3 +1,32 @@
+from math import modf
+from datetime import datetime, timedelta
+
+
+
+
+def timestamp_to_datetime(s):
+    '''
+    Parses a timestamp to a datetime instance.
+    @param: s:str Timestamp string.
+    @return: datetime
+    '''
+    f, i = modf(long(s) / float(1000))
+    return datetime.fromtimestamp(i) + timedelta(milliseconds=f * 1000)
+
+
+
+
+def datetime_to_timestamp(d):
+    '''
+    Converts a datetime instance into a timestamp string.
+    @param d:datetime Date instance
+    @return:long
+    '''
+    return long(d.strftime("%s") + str(d.time().microsecond / 1000))
+
+
+
+
 def is_empty_or_none(s):
     '''
     Returns a value indicating whether the string is empty or none
@@ -59,3 +88,4 @@ class Address(object):
             raise AttributeError("Address has no such attribute.")
 
         self.__address_dict[field] = value
+

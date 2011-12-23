@@ -3,11 +3,11 @@ import urllib, urllib2
 import simplejson
 import re
 import zlib
-from math import modf
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 from gzip import GzipFile
 from StringIO import StringIO
-from greendizer.base import is_empty_or_none
+from greendizer.base import (is_empty_or_none, timestamp_to_datetime,
+                             datetime_to_timestamp)
 
 
 
@@ -320,8 +320,7 @@ class Etag(object):
         Gets the timestamp of the last modification date.
         @return: long
         '''
-        return (self.__last_modified.strftime("%s") +
-                str(self.__last_modified.time().microsecond / 1000))
+        return datetime_to_timestamp(self.__last_modified)
 
 
     @property
@@ -351,11 +350,10 @@ class Etag(object):
         if not raw or len(raw) == 0:
             return
 
-        parts = raw.split("-")
-        f, i = modf(long(parts[0]) / float(1000))
-        return cls(datetime.fromtimestamp(i) +
-                   timedelta(milliseconds=f * 1000),
-                   parts[1])
+        timestamp, identifier = raw.split("-")
+        return cls(timestamp_to_datetime(timestamp), identifier)
+
+
 
 
 class Range(object):

@@ -90,7 +90,7 @@ class User(Resource):
         Gets the birthday
         @return: date
         '''
-        return self._get_date_attribute("birthday").date
+        return self._get_date_attribute("birthday").date()
 
 
 

@@ -22,7 +22,7 @@ def datetime_to_timestamp(d):
     @param d:datetime Date instance
     @return:long
     '''
-    return long(d.strftime("%s") + str(d.time().microsecond / 1000))
+    return long(d.strftime("%s") + "%03d" % (d.time().microsecond / 1000))
 
 
 

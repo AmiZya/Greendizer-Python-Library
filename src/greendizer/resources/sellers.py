@@ -74,13 +74,14 @@ class EmailNode(Node):
                                         Email)
 
 
-    def get_resource_by_id(self, identifier):
+    def get(self, identifier, default=None):
         '''
         Gets an email by its ID.
         @param identifier:str ID of the email address.
         @return: Email
         '''
-        return self._resource_cls(self.__seller, identifier)
+        return super(EmailNode, self).get(self.__seller, identifier,
+                                          default=default)
 
 
 
@@ -252,13 +253,14 @@ class InvoiceReportNode(Node):
                                                 InvoiceReport)
 
 
-    def get_resource_by_id(self, identifier):
+    def get(self, identifier, default=None):
         '''
         Gets an invoice report by its ID.
         @param identifier:str ID of the invoice report.
         @return: InvoiceReport
         '''
-        return self._resource_cls(self.__email, identifier)
+        return super(InvoiceReportNode, self).get(self.__email, identifier,
+                                                  default=default)
 
 
 
@@ -409,13 +411,14 @@ class ThreadNode(ThreadNodeBase):
                                          Thread)
 
 
-    def get_resource_by_id(self, identifier):
+    def get(self, identifier, default=None):
         '''
         Gets a thread by its ID.
         @param identifier:str ID of the thread.
         @return: Thread.
         '''
-        return self._resource_cls(self.__seller, identifier)
+        return super(ThreadNode, self).get(self.__seller, identifier,
+                                           default=None)
 
 
     @property
@@ -477,13 +480,14 @@ class BuyerNode(Node):
         super(BuyerNode, self).__init__(seller, seller.uri + "buyers/", Buyer)
 
 
-    def get_resource_by_id(self, identifier):
+    def get(self, identifier, default=None):
         '''
         Gets a buyer by its ID.
         @param identifier:ID of the buyer.
         @return: Buyer
         '''
-        return self._resource_cls(self.__seller, identifier)
+        return super(BuyerNode, self).get(self.__seller, identifier,
+                                          default=None)
 
 
 

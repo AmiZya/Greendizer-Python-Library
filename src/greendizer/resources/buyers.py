@@ -103,13 +103,13 @@ class EmailNode(Node):
                                         Email)
 
 
-    def get_resource_by_id(self, identifier):
+    def get(self, identifier, default=None):
         '''
         Gets an email address by its ID.
         @param identifier:str ID of the email address.
         @return: Email
         '''
-        return self._resource_cls(self.__user, identifier)
+        super(EmailNode, self).get(self.__user, identifier, default=None)
 
 
 
@@ -144,13 +144,13 @@ class InvoiceNode(InvoiceNodeBase):
         super(InvoiceNode, self).__init__(email, Invoice)
 
 
-    def get_resource_by_id(self, identifier):
+    def get(self, identifier, default=None):
         '''
         Gets an invoice by its ID.
         @param identifier:str ID of the invoice.
         @return: Invoice
         '''
-        return self._resource_cls(self.__email, identifier)
+        super(InvoiceNode, self).get(self.__email, identifier, default=None)
 
 
 
@@ -216,13 +216,13 @@ class ThreadNode(ThreadNodeBase):
                                          Thread)
 
 
-    def get_resource_by_id(self, identifier):
+    def get(self, identifier, default=None):
         '''
         Gets a thread by its ID.
         @param identifier:str ID of the thread.
         @return: str
         '''
-        return self._resource_cls(self.__email, identifier)
+        super(ThreadNode, self).get(self.__email, identifier, default=None)
 
 
 
@@ -304,13 +304,13 @@ class SellerNode(Node):
                                         Seller)
 
 
-    def get_resource_by_id(self, identifier):
+    def get(self, identifier, default=None):
         '''
         Gets the history of a specific seller
         @param identifier:str ID of the seller.
         @return: Seller
         '''
-        return self._resource_cls(self.__email, identifier)
+        super(SellerNode, self).get(self.__email, identifier, default=None)
 
 
     @property

@@ -204,7 +204,6 @@ class Employer(Company):
         '''
         Initializes a new instance of the Settings class.
         @param user:User currently authenticated user.
-        @param identifier:Id of the company
         '''
         self.__user = user
         super(Employer, self).__init__(user.client)
@@ -451,16 +450,19 @@ class InvoiceNodeBase(Node):
                                               resource_cls=resource_cls)
 
 
-    def get_resource_by_id(self, identifier):
+    def get(self, identifier, default=None):
         '''
         Gets an invoice using its ID.
         @param identifier:str ID of the invoice.
         @return: Invoice
         '''
-        return self._resource_cls(self.__email, identifier)
+        super(InvoiceNodeBase, self).get(self.__email,
+                                                        identifier,
+                                                        default=None)
 
 
-    def get_email(self):
+    @property
+    def email(self):
         '''
         Gets the email instance to which this node is attached.
         @return: Email
@@ -692,7 +694,7 @@ class ThreadNodeBase(Node):
         response = request.get_response()
         if response.get_status_code() == 201:
             thread_id = extract_id_from_uri(response["Location"])
-            thread = self.get_resource_by_id(thread_id)
+            thread = self[thread_id]
             thread.sync(response.data, response["Etag"])
             return thread
 

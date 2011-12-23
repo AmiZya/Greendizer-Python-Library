@@ -1,10 +1,13 @@
-from math import fsum
 from xml.dom.minidom import Document
+from StringIO import StringIO
 from datetime import datetime, date
+from greendizer.base import is_empty_or_none
 
 
 
-
+MAX_LENGTH = 100
+VERSION = "gd-xmli-1.1"
+AGENT = "Greendizer Pyzer Lib/1.0"
 CURRENCIES = ['AED', 'ALL', 'ANG', 'ARS', 'AUD', 'AWG', 'BBD', 'BDT', 'BGN',
               'BHD', 'BIF', 'BMD', 'BND', 'BOB', 'BRL', 'BTN', 'BWP', 'BYR',
               'BZD', 'CAD', 'CHF', 'CLP', 'CNY', 'COP', 'CRC', 'CUP', 'CVE',
@@ -70,25 +73,16 @@ class XMLiElement(object):
         @param cdata:bool A value indicating whether to use CDATA or not.
         @return:Node
         '''
-        tag = root.createElement(name)
+        if not value or is_empty_or_none(str(value)):
+            return
+
+        tag = root.ownerDocument.createElement(name)
         if cdata:
-            tag.appendChild(root.ownerDocument.createCDATASection(value))
+            tag.appendChild(root.ownerDocument.createCDATASection(str(value)))
         else:
-            tag.appendChild(root.ownerDocument.createTextNode(value))
+            tag.appendChild(root.ownerDocument.createTextNode(str(value)))
 
-        return tag
-
-
-    def _create_attribute(self, root, name, value):
-        '''
-        Creates and adds an attribute.
-        @param root:Element Root element.
-        @param name:str Attribute name.
-        @param value:object Attribute value.
-        '''
-        attribute = root.createAttribute(name)
-        attribute.value = value
-        return attribute
+        return root.appendChild(tag)
 
 
     def to_xml(self):
@@ -100,16 +94,14 @@ class XMLiElement(object):
         raise NotImplementedError()
 
 
-    def to_string(self, prettify=False, **kwargs):
+    def to_string(self, indent="", newl=""):
         '''
         Returns a string representation of the XMLi element.
         @return: str
         '''
-        printArgs = {"encoding":"UTF-8"}
-        if not prettify:
-            printArgs.update({"indent":"", "newl": ""})
-
-        return self.to_xml(**kwargs).toprettyprint(**printArgs)
+        buf = StringIO()
+        self.to_xml().writexml(buf, indent="", addindent=indent, newl=newl)
+        return buf.getvalue()
 
 
     def __str__(self):
@@ -157,14 +149,16 @@ class ExtensibleXMLiElement(XMLiElement):
             del self.__custom_elements[namespace]
 
 
-    def __createElementNS(self, root, uri, tag):
+    def __createElementNS(self, root, uri, name, value):
         '''
         Creates and returns an element with a qualified name and a name space
         @param root:Element Parent element
         @param uri:str Namespace URI
         @param tag:str Tag name.
         '''
-        return root.appendChild(root.ownerDocument.createElementNS(uri, tag))
+        tag = root.ownerDocument.createElementNS(uri, name)
+        tag.appendChild(root.ownerDocument.createCDATASection(str(value)))
+        return root.appendChild(tag)
 
 
     def to_xml(self, root):
@@ -174,19 +168,22 @@ class ExtensibleXMLiElement(XMLiElement):
         @param root:Element Root XML element.
         @return: Element
         '''
-        custom = root.appendChild(root.ownerDocument.createElement("custom"))
+        if not len(self.__custom_elements):
+            return
 
-        for uri, tags in self.__custom_elements:
-            for name, value in tags:
-                item = self.__createElementNS(custom, uri, name)
-                self._create_text_node(item, name, value, True)
+        custom = root.appendChild(root.ownerDocument.createElement("custom"))
+        for uri, tags in self.__custom_elements.items():
+            prefix, url = uri.split(":", 1)
+            custom.setAttribute("xmlns:" + prefix, url)
+            for name, value in tags.items():
+                self.__createElementNS(custom, url, prefix + ":" + name, value)
 
         return root
 
 
 
 
-class XMLiBuilder(XMLiElement):
+class XMLiBuilder(object):
     '''
     Encapsulates methods and tools to generate a valid XMLi.
     '''
@@ -194,7 +191,16 @@ class XMLiBuilder(XMLiElement):
         '''
         Initializes a new instance of the XMLiBuilder class.
         '''
-        self.__invoices = {}
+        self.__invoices = []
+
+
+    @property
+    def invoices(self):
+        '''
+        Gets the list of invoices
+        @return:list
+        '''
+        return self.__invoices
 
 
     def to_xml(self):
@@ -202,13 +208,36 @@ class XMLiBuilder(XMLiElement):
         Returns a DOM Document representing the invoice
         @return: Document
         '''
+        if len(self.__invoices) > MAX_LENGTH:
+            raise Exception("XMLi is limited to 100 invoices at a time.")
+
         doc = Document()
         root = doc.createElement("invoices")
+        root.setAttribute("version", VERSION)
+        root.setAttribute("agent", AGENT)
+        doc.appendChild(root)
         for invoice in self.__invoices:
             root.appendChild(invoice.to_xml())
 
         return doc
 
+
+    def to_string(self):
+        '''
+        Returns a string representation of the XMLi element.
+        @return: str
+        '''
+        buf = StringIO()
+        self.to_xml().writexml(buf, encoding="UTF-8")
+        return buf.getvalue()
+
+
+    def __str__(self):
+        '''
+        Returns a string representation of the XMLi
+        @return: str
+        '''
+        return self.to_string()
 
 
 
@@ -232,6 +261,8 @@ class Invoice(ExtensibleXMLiElement):
         @param date:datetime Invoice date.
         @param due_date:date Invoice's due date.
         '''
+        super(Invoice, self).__init__()
+
         self.name = name
         self.description = description
         self.currency = currency
@@ -241,6 +272,15 @@ class Invoice(ExtensibleXMLiElement):
         self.custom_id = custom_id
         self.terms = terms
         self.__groups = []
+
+
+    @property
+    def groups(self):
+        '''
+        Gets the list of groups
+        @return: list
+        '''
+        return self.__groups
 
 
     def __set_name(self, value):
@@ -273,7 +313,7 @@ class Invoice(ExtensibleXMLiElement):
         if value > datetime.now():
             raise ValueError("Date cannot be in the future.")
 
-        if self.__due_date and value > self.__due_date:
+        if self.__due_date and value.date() > self.__due_date:
             raise ValueError("Date cannot be posterior to the due date.")
 
         self.__date = value
@@ -284,7 +324,7 @@ class Invoice(ExtensibleXMLiElement):
         Sets the due date of the invoice.
         @param value:date
         '''
-        if self.__date and value < self.__date:
+        if self.__date.date() and value < self.__date.date():
             raise ValueError("Due date cannot be anterior to the invoice date.")
 
         self.__due_date = value
@@ -307,7 +347,7 @@ class Invoice(ExtensibleXMLiElement):
         Gets the total amount of discounts of the invoice.
         @return: float
         '''
-        return fsum([group.total_discounts for group in self.__groups])
+        return sum([group.total_discounts for group in self.__groups])
 
 
     @property
@@ -316,7 +356,7 @@ class Invoice(ExtensibleXMLiElement):
         Gets the total amount of taxes of the invoice.
         @return: float
         '''
-        return fsum([group.total_taxes for group in self.__groups])
+        return sum([group.total_taxes for group in self.__groups])
 
 
     @property
@@ -325,7 +365,7 @@ class Invoice(ExtensibleXMLiElement):
         Gets the total of the invoice.
         @return: float
         '''
-        return fsum([group.total for group in self.__groups])
+        return sum([group.total for group in self.__groups])
 
 
     name = property(lambda self: self.__name, __set_name)
@@ -352,14 +392,18 @@ class Invoice(ExtensibleXMLiElement):
         self._create_text_node(root, "terms", self.terms, True)
         self._create_text_node(root, "total", self.total)
 
-        body = root.createElement("body")
+        body = doc.createElement("body")
+        root.appendChild(body)
+
+        groups = doc.createElement("groups")
+        body.appendChild(groups)
         for group in self.__groups:
-            body.appendChild(group.to_xml())
+            groups.appendChild(group.to_xml())
 
         #Adding custom elements
         super(Invoice, self).to_xml(body)
 
-        root.unlink()
+
         return root
 
 
@@ -375,9 +419,19 @@ class Group(ExtensibleXMLiElement):
         @param name:str Group name.
         @param description:str Group description.
         '''
+        super(Group, self).__init__()
         self.name = name
         self.description = description
         self.__lines = []
+
+
+    @property
+    def lines(self):
+        '''
+        Gets the list of lines.
+        @return: list
+        '''
+        return self.__lines
 
 
     def __set_name(self, value):
@@ -397,7 +451,7 @@ class Group(ExtensibleXMLiElement):
         Gets the total amount of discounts of the group.
         @return: float
         '''
-        return fsum([line.total_discounts for line in self.__lines])
+        return sum([line.total_discounts for line in self.__lines])
 
 
     @property
@@ -406,7 +460,7 @@ class Group(ExtensibleXMLiElement):
         Gets the total amount of taxes of the group.
         @return: float
         '''
-        return fsum([line.total_taxes for line in self.__lines])
+        return sum([line.total_taxes for line in self.__lines])
 
 
     @property
@@ -415,7 +469,7 @@ class Group(ExtensibleXMLiElement):
         Gets the total of the group.
         @return: float
         '''
-        return fsum([line.total for line in self.__lines])
+        return sum([line.total for line in self.__lines])
 
 
     name = property(lambda self: self.__name, __set_name)
@@ -428,10 +482,15 @@ class Group(ExtensibleXMLiElement):
         '''
         doc = Document()
         root = doc.createElement("group")
+        self._create_text_node(root, "name", self.name, True)
+        self._create_text_node(root, "description", self.description, True)
+
+        lines = doc.createElement("lines")
+        root.appendChild(lines)
         for line in self.__lines:
-            root.appendChild(line.to_xml())
+            lines.appendChild(line.to_xml())
+
         super(Group, self).to_xml(root)
-        root.unlink()
         return root
 
 
@@ -447,6 +506,8 @@ class Line(ExtensibleXMLiElement):
         '''
         Initializes a new instance of the Line class.
         '''
+        super(Line, self).__init__()
+
         self.name = name
         self.description = description
         self.quantity = quantity
@@ -458,6 +519,24 @@ class Line(ExtensibleXMLiElement):
         self.sscc = sscc
         self.__taxes = []
         self.__discounts = []
+
+
+    @property
+    def discounts(self):
+        '''
+        Gets the list of discounts
+        @return: list
+        '''
+        return self.__discounts
+
+
+    @property
+    def taxes(self):
+        '''
+        Gets the list of taxes
+        @return: list
+        '''
+        return self.__taxes
 
 
     def __set_name(self, value):
@@ -476,9 +555,6 @@ class Line(ExtensibleXMLiElement):
         Sets the unit of the line.
         @param value:str
         '''
-        if not value or not len(value):
-            raise ValueError("Invalid unit.")
-
         if value in UNITS:
             value = value.upper()
 
@@ -522,7 +598,7 @@ class Line(ExtensibleXMLiElement):
         Gets the total amount of discounts applied to the current line.
         @return: float
         '''
-        return fsum([ d.compute(self.gross) for d in self.__discounts ])
+        return sum([ d.compute(self.gross) for d in self.__discounts ])
 
 
     @property
@@ -531,8 +607,8 @@ class Line(ExtensibleXMLiElement):
         Gets the total amount of taxes applied to the current line.
         @return: float
         '''
-        base = self.gross - self.discounts
-        return fsum([ t.compute(base) for t in self.__taxes ])
+        base = self.gross - self.total_discounts
+        return sum([ t.compute(base) for t in self.__taxes ])
 
 
     @property
@@ -567,12 +643,20 @@ class Line(ExtensibleXMLiElement):
         self._create_text_node(root, "gtin", self.gtin)
         self._create_text_node(root, "sscc", self.sscc)
 
-        for treatment in (self.__taxes + self.__discounts):
-            root.appendChild(treatment.to_xml())
+        if len(self.__taxes):
+            taxes = root.ownerDocument.createElement("taxes")
+            root.appendChild(taxes)
+            for tax in self.__taxes:
+                taxes.appendChild(tax.to_xml())
+
+        if len(self.__discounts):
+            discounts = root.ownerDocument.createElement("discounts")
+            root.appendChild(discounts)
+            for discount in self.__discounts:
+                discounts.appendChild(discount.to_xml())
 
         super(Line, self).to_xml(root)
 
-        root.unlink()
         return root
 
 
@@ -582,17 +666,21 @@ class Treatment(XMLiElement):
     '''
     Represents a line treatment.
     '''
-    def __init__(self, name=None, rate=0, rate_type=RATE_TYPE_FIXED,
-                 interval=None):
+    def __init__(self, name=None, description="", rate_type=RATE_TYPE_FIXED,
+                 rate=0, interval=None):
         '''
         Initializes a new instance of the Treatment class.
         @param name:str Treatment name.
         @param rate:float Rate level
         @param rate_type:str Rate type
         '''
+        super(Treatment, self).__init__()
+
         self.name = name
+        self.description = description
         self.rate = rate
         self.rate_type = rate_type
+        self.interval = interval
 
 
     def __set_name(self, value):
@@ -665,11 +753,11 @@ class Treatment(XMLiElement):
         '''
         doc = Document()
         root = doc.createElement(name)
-        self._create_attribute(root, "type", self.rate_type)
-        self._create_attribute(root, "name", self.name)
-        self._create_attribute(root, "base", self.interval)
-        root.appendChild(doc.createTextNode(self.rate))
-        root.unlink()
+        root.setAttribute("type", self.rate_type)
+        root.setAttribute("name", self.name)
+        root.setAttribute("description", self.description)
+        root.setAttribute("base", self.interval) if self.interval else ""
+        root.appendChild(doc.createTextNode(str(self.rate)))
         return root
 
 
@@ -743,6 +831,8 @@ class Address(XMLiElement):
         @param state:str State
         @param country:str Country
         '''
+        super(Address, self).__init__()
+
         self.number = number
         self.street = street
         self.city = city
@@ -774,12 +864,10 @@ class Address(XMLiElement):
         '''
         doc = Document()
         root = doc.createElement(name)
-        self._create_text_node(root, "number", self.number)
-        self._create_text_node(root, "street", self.street, True)
+        self._create_text_node(root, "address", self.street, True)
         self._create_text_node(root, "city", self.city, True)
         self._create_text_node(root, "zipcode", self.zipcode)
         self._create_text_node(root, "state", self.state, True)
         self._create_text_node(root, "country", self.country)
-        root.unlink()
         return root
 

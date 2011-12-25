@@ -484,9 +484,18 @@ class Node(object):
         @param resource_cls:Class Class of the resource to instantiate.
         '''
         self.__client = client
-        self.__uri = uri
+        self._uri = uri
         self.__collections = {}
         self._resource_cls = resource_cls
+
+
+    def __contains__(self, identifier):
+        '''
+        Checks if a resource exists
+        @param identifier:str ID of the resource to find
+        @return: bool
+        '''
+        return self[identifier].exists
 
 
     def __getitem__(self, identifier):
@@ -548,7 +557,7 @@ class Node(object):
         @return: Collection
         '''
         if query not in self.__collections:
-            self.__collections[query] = Collection(self, self.__uri, query)
+            self.__collections[query] = Collection(self, self._uri, query)
 
         return self.__collections[query]
 

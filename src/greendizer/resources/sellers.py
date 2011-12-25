@@ -3,6 +3,7 @@ from datetime import timedelta
 from greendizer.base import Address, is_empty_or_none, extract_id_from_uri
 from greendizer.http import Request
 from greendizer.dal import Resource, Node
+from greendizer.xmli import XMLiBuilder
 from greendizer.resources import (User, EmailBase, InvoiceBase, ThreadBase,
                                   MessageBase, HistoryBase, InvoiceNodeBase,
                                   ThreadNodeBase, MessageNodeBase)
@@ -137,11 +138,16 @@ class InvoiceNode(InvoiceNodeBase):
         @param xmli:str Invoice XML representation.
         @return: InvoiceReport
         '''
+        xmli = xmli.to_string() if isinstance(xmli, XMLiBuilder) else xmli
         if is_empty_or_none(xmli):
             raise ValueError("Invalid XMLi")
 
-        request = Request(self.__seller.client, method="POST",
-                          content_type="application/xml", uri=self.uri,
+#        import os
+#        if sys.getsizeof(xmli) > 500 * 1024:
+#            raise ValueError("XMLi's size is limited to 500kb.")
+
+        request = Request(self.email.client, method="POST",
+                          content_type="application/xml", uri=self._uri,
                           data=xmli)
 
         response = request.get_response()

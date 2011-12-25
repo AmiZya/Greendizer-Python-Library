@@ -1,7 +1,7 @@
 from xml.dom.minidom import Document
 from StringIO import StringIO
 from datetime import datetime, date
-from greendizer.base import is_empty_or_none
+from greendizer.base import is_empty_or_none, is_valid_email
 
 
 
@@ -133,6 +133,10 @@ class ExtensibleXMLiElement(XMLiElement):
         @param namespace:XMLNamespace
         @return: dict
         '''
+        if ':' not in namespace:
+            raise ValueError('''Invalid name space format 
+                             myprefix:http://www.example.com''')
+
         if namespace not in self.__custom_elements:
             self.__custom_elements[namespace] = {}
 
@@ -178,6 +182,93 @@ class ExtensibleXMLiElement(XMLiElement):
             for name, value in tags.items():
                 self.__createElementNS(custom, url, prefix + ":" + name, value)
 
+        return root
+
+
+
+class Address(XMLiElement):
+    '''
+    Represents a postal address
+    '''
+    def __init__(self, name=None, email=None, address=None, city=None,
+                 zipcode=None, state=None, country=None):
+        '''
+        Initializes a new instance of the Address class.
+        @param number:str Street number
+        @param street:str Street name
+        @param city:str City
+        @param zipcode:str Zipcode
+        @param state:str State
+        @param country:str Country
+        '''
+        super(Address, self).__init__()
+
+        self.name = name
+
+        if email:
+            self.email = email
+        else:
+            self.__email = None
+
+        self.address = address
+        self.city = city
+        self.zipcode = zipcode
+        self.state = state
+
+        if country:
+            self.country = country
+        else:
+            self.__country = None
+
+
+    def __set_email(self, value):
+        '''
+        Sets the email address
+        @param value:str
+        '''
+        if not is_valid_email(value):
+            raise ValueError("Invalid email address")
+
+        self.__email = value
+
+
+    def __set_country(self, value):
+        '''
+        Sets the country
+        @param value:str
+        '''
+        if value not in COUNTRIES:
+            raise ValueError('''Country code must be a valid ISO 3166-1
+                            alpha-2 string''')
+
+        self.__country = value
+
+
+    email = property(lambda self: self.__email, __set_email)
+    country = property(lambda self: self.__country, __set_country)
+
+
+    def to_xml(self, name="address"):
+        '''
+        Returns a DOM Element containing the XML representation of the
+        address.
+        @return:Element 
+        '''
+        for n, v in { "name": self.name, "email": self.email,
+                            "address":self.address, "city": self.city,
+                            "country": self.country}.items():
+            if is_empty_or_none(v):
+                raise ValueError("'%s' attribute cannot be empty or None." % n)
+
+        doc = Document()
+        root = doc.createElement(name)
+        self._create_text_node(root, "name", self.name, True)
+        self._create_text_node(root, "email", self.email)
+        self._create_text_node(root, "address", self.address, True)
+        self._create_text_node(root, "city", self.city, True)
+        self._create_text_node(root, "zipcode", self.zipcode)
+        self._create_text_node(root, "state", self.state, True)
+        self._create_text_node(root, "country", self.country)
         return root
 
 
@@ -251,7 +342,8 @@ class Invoice(ExtensibleXMLiElement):
 
     def __init__(self, name=None, description=None, currency=None,
                  status="paid", date=datetime.now(), due_date=date.today(),
-                 custom_id=None, terms=None):
+                 custom_id=None, terms=None, address=Address(),
+                 delivery_address=None):
         '''
         Initializes a new instance of the Invoice class.
         @param name:str Invoice name.
@@ -263,6 +355,8 @@ class Invoice(ExtensibleXMLiElement):
         '''
         super(Invoice, self).__init__()
 
+        self.address = address
+        self.delivery_address = delivery_address
         self.name = name
         self.description = description
         self.currency = currency
@@ -380,8 +474,22 @@ class Invoice(ExtensibleXMLiElement):
         Returns a DOM element containing the XML representation of the invoice
         @return:Element
         '''
+        if not len(self.groups):
+            raise Exception("An invoice must at least have one group.")
+
+        for n, v in { "name": self.name, "currency": self.currency,
+                    "address":self.address, "status": self.status,
+                    "date": self.date, "due_date": self.due_date}.items():
+            if is_empty_or_none(v):
+                raise ValueError("'%s' attribute cannot be empty or None." % n)
+
         doc = Document()
         root = doc.createElement("invoice")
+        root.appendChild(self.address.to_xml("address"))
+
+        if self.delivery_address:
+            root.appendChild(self.address.to_xml("deliveryAddress"))
+
         self._create_text_node(root, "name", self.name, True)
         self._create_text_node(root, "description", self.description, True)
         self._create_text_node(root, "currency", self.currency)
@@ -402,8 +510,6 @@ class Invoice(ExtensibleXMLiElement):
 
         #Adding custom elements
         super(Invoice, self).to_xml(body)
-
-
         return root
 
 
@@ -480,6 +586,13 @@ class Group(ExtensibleXMLiElement):
         Returns a DOM representation of the group.
         @return: Element
         '''
+        if not len(self.lines):
+            raise Exception("A group must at least have one line.")
+
+        for n, v in { "name": self.name }.items():
+            if is_empty_or_none(v):
+                raise ValueError("'%s' attribute cannot be empty or None." % n)
+
         doc = Document()
         root = doc.createElement("group")
         self._create_text_node(root, "name", self.name, True)
@@ -631,6 +744,12 @@ class Line(ExtensibleXMLiElement):
         Returns a DOM representation of the line.
         @return: Element
         '''
+        for n, v in { "name": self.name, "quantity": self.quantity,
+                     "unit_price":self.unit_price }.items():
+            if is_empty_or_none(v):
+                print "%s: %s" % (n, v)
+                raise ValueError("'%s' attribute cannot be empty or None." % n)
+
         doc = Document()
         root = doc.createElement("line")
         self._create_text_node(root, "date", self.date.isoformat())
@@ -751,6 +870,10 @@ class Treatment(XMLiElement):
         Returns a DOM representation of the line treatment.
         @return: Element
         '''
+        for n, v in { "rate_type": self.rate_type, "rate": self.rate }.items():
+            if is_empty_or_none(v):
+                raise ValueError("'%s' attribute cannot be empty or None." % n)
+
         doc = Document()
         root = doc.createElement(name)
         root.setAttribute("type", self.rate_type)
@@ -812,62 +935,4 @@ class Discount(Treatment):
         @return: str
         '''
         return super(Discount, self).to_string("discount")
-
-
-
-
-class Address(XMLiElement):
-    '''
-    Represents a postal address
-    '''
-    def __init__(self, number=None, street=None, city=None, zipcode=None,
-                 state=None, country=None):
-        '''
-        Initializes a new instance of the Address class.
-        @param number:str Street number
-        @param street:str Street name
-        @param city:str City
-        @param zipcode:str Zipcode
-        @param state:str State
-        @param country:str Country
-        '''
-        super(Address, self).__init__()
-
-        self.number = number
-        self.street = street
-        self.city = city
-        self.zipcode = zipcode
-        self.state = state
-        self.country = country
-
-
-    def __set_country(self, value):
-        '''
-        Sets the country
-        @param value:str
-        '''
-        if value not in COUNTRIES:
-            raise ValueError('''Country code must be a valid ISO 3166-1
-                            alpha-2 string''')
-
-        self.__country = value
-
-
-    country = property(lambda self: self.__country, __set_country)
-
-
-    def to_xml(self, name="address"):
-        '''
-        Returns a DOM Element containing the XML representation of the
-        address.
-        @return:Element 
-        '''
-        doc = Document()
-        root = doc.createElement(name)
-        self._create_text_node(root, "address", self.street, True)
-        self._create_text_node(root, "city", self.city, True)
-        self._create_text_node(root, "zipcode", self.zipcode)
-        self._create_text_node(root, "state", self.state, True)
-        self._create_text_node(root, "country", self.country)
-        return root
 

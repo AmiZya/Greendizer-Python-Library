@@ -15,7 +15,7 @@ from greendizer.base import (is_empty_or_none, timestamp_to_datetime,
 COMPRESSION_DEFLATE = "deflate"
 COMPRESSION_GZIP = "gzip"
 API_ROOT = "https://api.greendizer.com/"
-
+USE_GZIP = True
 
 
 
@@ -45,7 +45,8 @@ class ApiException(Exception):
         Returns a string representation of the exception
         @return: str
         '''
-        return self.__response.data
+        return ((self.__response.data or {})
+                .get('desc', "Unexpected error (code: %s)" % self.code))
 
 
 
@@ -73,12 +74,13 @@ class Request(object):
         def get_method(self):
             '''
             Gets the HTTP method in use.
+            @return: str
             '''
             return self.__method
 
 
-    def __init__(self, client=None, method="GET", uri=None,
-                 content_type="application/x-www-form-urlencoded", data=None):
+    def __init__(self, client=None, method="GET", uri=None, data=None,
+                 content_type="application/x-www-form-urlencoded"):
         '''
         Initializes a new instance of the Request class.
         @param method:str HTTP method
@@ -174,13 +176,16 @@ class Request(object):
             if self.__content_type == "application/x-www-form-urlencoded":
                 encoded_data = urllib.urlencode(self.data)
             else:
-                #Compress to GZip
-                headers["Content-Encoding"] = COMPRESSION_GZIP
-                bf = StringIO('')
-                f = GzipFile(fileobj=bf, mode='wb', compresslevel=9)
-                f.write(self.data)
-                f.close()
-                encoded_data = bf.getvalue()
+                if USE_GZIP:
+                    #Compress to GZip
+                    headers["Content-Encoding"] = COMPRESSION_GZIP
+                    bf = StringIO('')
+                    f = GzipFile(fileobj=bf, mode='wb', compresslevel=9)
+                    f.write(self.data)
+                    f.close()
+                    encoded_data = bf.getvalue()
+                else:
+                    encoded_data = self.data
 
         request = Request.HttpRequest(API_ROOT + self.uri, data=encoded_data,
                                       method=method, headers=headers)
@@ -230,9 +235,19 @@ class Response(object):
     def __getitem__(self, header):
         '''
         Gets the value of a header
+        @param header:str Header name
         @return: object
         '''
-        header = header.lower()
+        return self.get_header(header)
+
+
+    def get_header(self, name):
+        '''
+        Gets the value of a header
+        @param name:str Header name
+        @return: object
+        '''
+        header = name.lower()
         if(header in ["date", "last-modified"]
            and self.__info.getheader(header, None)):
             value = self.__info.getheader(header)
@@ -343,7 +358,7 @@ class Etag(object):
     @classmethod
     def parse(cls, raw):
         '''
-        Parses a string into a new instance of the Etag class.
+        Parses a string and returns a new instance of the Etag class.
         @param raw:str String to parse
         @return: Etag
         '''
@@ -385,7 +400,8 @@ class ContentRange(object):
     '''
     Represents an HTTP Content-Range
     '''
-    REG_EXP = r'^(?P<unit>\w+)(?:[ ]|=)(?P<offset>\d+)-(?P<last>\d+)\/(?P<total>\d+)$'
+    REG_EXP = r'''^(?P<unit>\w+)(?:[ ]|=)(?P<offset>\d+)-(?P<last>\d+)
+                \/(?P<total>\d+)$'''
 
 
     def __init__(self, unit, offset, limit, total):

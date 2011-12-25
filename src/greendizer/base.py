@@ -1,5 +1,15 @@
+import re
 from math import modf
 from datetime import datetime, timedelta
+
+
+
+## {{{ http://code.activestate.com/recipes/65215/ (r5)
+def is_valid_email(s):
+    return (s and len(s) > 7 and
+            re.match('''^.+\\@(\\[?)[a-zA-Z0-9\\-\\.]+\\.([a-zA-Z]{2,3}|[0-9]
+                    {1,3})(\\]?)$''', s))
+## end of http://code.activestate.com/recipes/65215/ }}}
 
 
 
@@ -33,7 +43,13 @@ def is_empty_or_none(s):
     @param s:str String to check.
     @return: bool
     '''
-    return not s or len(s) == 0
+    if s is None:
+        return True
+
+    try:
+        return len(s) == 0
+    except:
+        return False
 
 
 

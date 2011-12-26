@@ -18,9 +18,15 @@ class XMLiTestCase(unittest.TestCase):
 
         invoice["sfr:https://www.fender.com/"]["points"] = "15 points"
 
-        invoice.address = Address(name="Mohamed Attahri", country="FR",
-                                  email="mohamed@attahri.com", city="Paris",
-                                  address="15, rue de Chambery")
+        invoice.buyer.name = "Mohamed Attahri"
+        invoice.buyer.email = "mohamed@attahri.com"
+        invoice.buyer.address = Address(country="FR", city="Paris",
+                                        zipcode="75015",
+                                        street_address="15, rue de Chambery")
+
+
+        invoice.shipping.recipient = invoice.buyer
+
 
         builder = XMLiBuilder()
         builder.invoices.append(invoice)

@@ -186,11 +186,12 @@ class ExtensibleXMLiElement(XMLiElement):
 
 
 
+
 class Address(XMLiElement):
     '''
     Represents a postal address
     '''
-    def __init__(self, name=None, email=None, address=None, city=None,
+    def __init__(self, street_address=None, city=None,
                  zipcode=None, state=None, country=None):
         '''
         Initializes a new instance of the Address class.
@@ -202,34 +203,12 @@ class Address(XMLiElement):
         @param country:str Country
         '''
         super(Address, self).__init__()
-
-        self.name = name
-
-        if email:
-            self.email = email
-        else:
-            self.__email = None
-
-        self.address = address
+        self.street_address = street_address
         self.city = city
         self.zipcode = zipcode
         self.state = state
-
-        if country:
-            self.country = country
-        else:
-            self.__country = None
-
-
-    def __set_email(self, value):
-        '''
-        Sets the email address
-        @param value:str
-        '''
-        if not is_valid_email(value):
-            raise ValueError("Invalid email address")
-
-        self.__email = value
+        self.__country = None
+        if country: self.country = country
 
 
     def __set_country(self, value):
@@ -244,7 +223,6 @@ class Address(XMLiElement):
         self.__country = value
 
 
-    email = property(lambda self: self.__email, __set_email)
     country = property(lambda self: self.__country, __set_country)
 
 
@@ -254,21 +232,105 @@ class Address(XMLiElement):
         address.
         @return:Element 
         '''
-        for n, v in { "name": self.name, "email": self.email,
-                            "address":self.address, "city": self.city,
-                            "country": self.country}.items():
+        for n, v in { "address":self.street_address, "city": self.city,
+                     "country": self.country}.items():
             if is_empty_or_none(v):
                 raise ValueError("'%s' attribute cannot be empty or None." % n)
 
         doc = Document()
         root = doc.createElement(name)
-        self._create_text_node(root, "name", self.name, True)
-        self._create_text_node(root, "email", self.email)
         self._create_text_node(root, "address", self.address, True)
         self._create_text_node(root, "city", self.city, True)
         self._create_text_node(root, "zipcode", self.zipcode)
         self._create_text_node(root, "state", self.state, True)
         self._create_text_node(root, "country", self.country)
+        return root
+
+
+
+
+class Contact(XMLiElement):
+    '''
+    Represents a contact in Greendizer
+    '''
+    def __init__(self, name=None, email=None, require_email=True,
+                 address=Address()):
+        '''
+        Initializes a new instance of the Contact Element
+        @param name:str Contact name
+        @param email:str Contact email address
+        @param address:Address Contact address
+        '''
+        super(Contact, self).__init__()
+        self.__require_email = require_email
+        self.name = name
+        self.__email = None
+        if email: self.email = email
+        self.address = address
+
+
+    def __set_email(self, value):
+        '''
+        Sets the email address
+        @param value:str
+        '''
+        if not is_valid_email(value):
+            raise ValueError("Invalid email address")
+
+        self.__email = value
+
+
+    email = property(lambda self: self.__email, __set_email)
+
+
+    def to_xml(self, tag_name="buyer"):
+        '''
+        Returns an XMLi representation of the object.
+        @param tag_name:str Tag name
+        @return: Element
+        '''
+        for n, v in { "name":self.name, "address": self.address }.items():
+            if is_empty_or_none(v):
+                raise ValueError("'%s' attribute cannot be empty or None." % n)
+
+        if self.__require_email and is_empty_or_none(self.email):
+            raise ValueError("'email' attribute cannot be empty or None.")
+
+        doc = Document()
+        root = doc.createElement(tag_name)
+        self._create_text_node(root, "name", self.name, True)
+        self._create_text_node(root, "email", self.email)
+        root.appendChild(self.address.to_xml())
+        return root
+
+
+
+
+class Shipping(XMLiElement):
+    '''
+    Represents the shipping details of the invoice.
+    '''
+    def __init__(self, recipient=Contact(require_email=False)):
+        '''
+        Initializes a new instance of the Shipping class.
+        @param address:Address Shipping address
+        '''
+        super(Shipping, self).__init__()
+        self.recipient = recipient
+
+
+    def to_xml(self):
+        '''
+        Returns an XMLi representation of the shipping details.
+        @return: Element
+        '''
+        for n, v in { "recipient":self.recipient }.items():
+            if is_empty_or_none(v):
+                raise ValueError("'%s' attribute cannot be empty or None." % n)
+
+        doc = Document()
+        root = doc.createElement("shipping")
+        root.appendChild(self.recipient.to_xml("recipient"))
         return root
 
 
@@ -300,7 +362,7 @@ class XMLiBuilder(object):
         @return: Document
         '''
         if len(self.__invoices) > MAX_LENGTH:
-            raise Exception("XMLi is limited to 100 invoices at a time.")
+            raise Exception("Limited to %d invoices at a time." % MAX_LENGTH)
 
         doc = Document()
         root = doc.createElement("invoices")
@@ -342,8 +404,8 @@ class Invoice(ExtensibleXMLiElement):
 
     def __init__(self, name=None, description=None, currency=None,
                  status="paid", date=datetime.now(), due_date=date.today(),
-                 custom_id=None, terms=None, address=Address(),
-                 delivery_address=None):
+                 custom_id=None, terms=None, buyer=Contact(),
+                 shipping=Shipping()):
         '''
         Initializes a new instance of the Invoice class.
         @param name:str Invoice name.
@@ -355,8 +417,8 @@ class Invoice(ExtensibleXMLiElement):
         '''
         super(Invoice, self).__init__()
 
-        self.address = address
-        self.delivery_address = delivery_address
+        self.buyer = buyer
+        self.shipping = shipping
         self.name = name
         self.description = description
         self.currency = currency
@@ -478,17 +540,17 @@ class Invoice(ExtensibleXMLiElement):
             raise Exception("An invoice must at least have one group.")
 
         for n, v in { "name": self.name, "currency": self.currency,
-                    "address":self.address, "status": self.status,
+                    "buyer":self.buyer, "status": self.status,
                     "date": self.date, "due_date": self.due_date}.items():
             if is_empty_or_none(v):
                 raise ValueError("'%s' attribute cannot be empty or None." % n)
 
         doc = Document()
         root = doc.createElement("invoice")
-        root.appendChild(self.address.to_xml("address"))
+        root.appendChild(self.buyer.to_xml("buyer"))
 
-        if self.delivery_address:
-            root.appendChild(self.address.to_xml("deliveryAddress"))
+        if self.shipping:
+            root.appendChild(self.shipping.to_xml())
 
         self._create_text_node(root, "name", self.name, True)
         self._create_text_node(root, "description", self.description, True)

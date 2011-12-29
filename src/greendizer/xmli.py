@@ -473,7 +473,7 @@ class Invoice(ExtensibleXMLiElement):
 
 
     def __init__(self, name=None, description=None, currency=None,
-                 status="paid", date=date.today(), due_date=date.today(),
+                 status="paid", date=date.today(), due_date=None,
                  custom_id=None, terms=None, buyer=Contact(),
                  shipping=Shipping()):
         '''
@@ -494,7 +494,7 @@ class Invoice(ExtensibleXMLiElement):
         self.currency = currency
         self.status = status
         self.date = date
-        self.due_date = due_date
+        self.due_date = due_date or self.date
         self.custom_id = custom_id
         self.terms = terms
         self.__groups = []

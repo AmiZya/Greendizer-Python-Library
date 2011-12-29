@@ -4,7 +4,7 @@ from datetime import datetime, date
 from greendizer.base import is_empty_or_none, is_valid_email
 
 
-
+INFINITY = float('infinity')
 MAX_LENGTH = 100
 VERSION = "gd-xmli-1.1"
 AGENT = "Greendizer Pyzer Lib/1.0"
@@ -60,6 +60,28 @@ COUNTRIES = ["AF", "AX", "AL", "DZ", "AS", "AD", "AO", "AI", "AQ", "AG", "AR",
 
 
 
+def datetime_to_string(d):
+    '''
+    Gets a string representation of a datetime instance.
+    @param date:datetime Datetime instance
+    @return:str
+    '''
+    return d.strftime("%Y-%m-%dT%H:%M:%S%z")
+
+
+
+
+def date_to_string(d):
+    '''
+    Gets a string representation of a datetime instance.
+    @param date:datetime Datetime instance
+    @return:str
+    '''
+    return d.strftime("%Y-%m-%d%z")
+
+
+
+
 class XMLiElement(object):
     '''
     Represents an XMLi element.
@@ -73,8 +95,14 @@ class XMLiElement(object):
         @param cdata:bool A value indicating whether to use CDATA or not.
         @return:Node
         '''
-        if not value or is_empty_or_none(str(value)):
+        if is_empty_or_none(value):
             return
+
+        if isinstance(value, date):
+            value = date_to_string(value)
+
+        if isinstance(value, datetime):
+            value = datetime_to_string(value)
 
         tag = root.ownerDocument.createElement(name)
         if cdata:
@@ -187,6 +215,48 @@ class ExtensibleXMLiElement(XMLiElement):
 
 
 
+class Interval(object):
+    '''
+    Represents an line treatment base interval
+    '''
+    def __init__(self, lower=0.0, upper=INFINITY):
+        '''
+        Initializes a new instance of the Interval class.
+        @param lower:float Lower limit
+        @param upper:flaot Upper limit
+        '''
+        self.lower = lower
+        self.upper = upper
+
+
+    @property
+    def amplitude(self):
+        '''
+        Gets the interval amplitude
+        @return: float
+        '''
+        return self.upper - self.lower
+
+
+    def to_string(self):
+        '''
+        Returns an XMLi representation of the interval
+        @return: str
+        '''
+        return "[%s,%s]" % (self.lower,
+                            '' if self.upper != INFINITY else self.upper)
+
+
+    def __str__(self):
+        '''
+        Returns an XMLi representation of the interval
+        @return: str
+        '''
+        return self.to_string()
+
+
+
+
 class Address(XMLiElement):
     '''
     Represents a postal address
@@ -239,7 +309,7 @@ class Address(XMLiElement):
 
         doc = Document()
         root = doc.createElement(name)
-        self._create_text_node(root, "address", self.address, True)
+        self._create_text_node(root, "streetAddress", self.street_address, True)
         self._create_text_node(root, "city", self.city, True)
         self._create_text_node(root, "zipcode", self.zipcode)
         self._create_text_node(root, "state", self.state, True)
@@ -367,7 +437,7 @@ class XMLiBuilder(object):
         doc = Document()
         root = doc.createElement("invoices")
         root.setAttribute("version", VERSION)
-        root.setAttribute("agent", AGENT)
+        root.setAttribute("invoice-agent", AGENT)
         doc.appendChild(root)
         for invoice in self.__invoices:
             root.appendChild(invoice.to_xml())
@@ -403,7 +473,7 @@ class Invoice(ExtensibleXMLiElement):
 
 
     def __init__(self, name=None, description=None, currency=None,
-                 status="paid", date=datetime.now(), due_date=date.today(),
+                 status="paid", date=date.today(), due_date=date.today(),
                  custom_id=None, terms=None, buyer=Contact(),
                  shipping=Shipping()):
         '''
@@ -466,7 +536,7 @@ class Invoice(ExtensibleXMLiElement):
         Sets the invoice date.
         @param value:datetime
         '''
-        if value > datetime.now():
+        if value > date.today():
             raise ValueError("Date cannot be in the future.")
 
         if self.__due_date and value.date() > self.__due_date:
@@ -480,7 +550,7 @@ class Invoice(ExtensibleXMLiElement):
         Sets the due date of the invoice.
         @param value:date
         '''
-        if self.__date.date() and value < self.__date.date():
+        if self.__date and value < self.__date:
             raise ValueError("Due date cannot be anterior to the invoice date.")
 
         self.__due_date = value
@@ -556,8 +626,8 @@ class Invoice(ExtensibleXMLiElement):
         self._create_text_node(root, "description", self.description, True)
         self._create_text_node(root, "currency", self.currency)
         self._create_text_node(root, "status", self.status)
-        self._create_text_node(root, "date", self.date.isoformat())
-        self._create_text_node(root, "dueDate", self.due_date.isoformat())
+        self._create_text_node(root, "date", self.date)
+        self._create_text_node(root, "dueDate", self.due_date)
         self._create_text_node(root, "customId", self.custom_id, True)
         self._create_text_node(root, "terms", self.terms, True)
         self._create_text_node(root, "total", self.total)
@@ -676,7 +746,7 @@ class Line(ExtensibleXMLiElement):
     Represents an invoice body line.
     '''
     def __init__(self, name=None, description="", unit=None, quantity=0,
-                 date=datetime.now(), unit_price=0, gin=None, gtin=None,
+                 date=date.today(), unit_price=0, gin=None, gtin=None,
                  sscc=None):
         '''
         Initializes a new instance of the Line class.
@@ -814,7 +884,7 @@ class Line(ExtensibleXMLiElement):
 
         doc = Document()
         root = doc.createElement("line")
-        self._create_text_node(root, "date", self.date.isoformat())
+        self._create_text_node(root, "date", self.date)
         self._create_text_node(root, "name", self.name, True)
         self._create_text_node(root, "description", self.description, True)
         self._create_text_node(root, "quantity", self.quantity)
@@ -861,7 +931,18 @@ class Treatment(XMLiElement):
         self.description = description
         self.rate = rate
         self.rate_type = rate_type
-        self.interval = interval
+        self.__interval = interval
+
+
+    def __set_interval(self, value):
+        '''
+        Sets the treatment interval
+        @param value:Interval
+        '''
+        if not isinstance(self, Interval):
+            raise ValueError("'value' must be of type Interval")
+
+        self.__interval = value
 
 
     def __set_name(self, value):
@@ -900,6 +981,7 @@ class Treatment(XMLiElement):
     name = property(lambda self: self.__name, __set_name)
     rate = property(lambda self: self.__rate, __set_rate)
     rate_type = property(lambda self: self.__rate_type, __set_rate_type)
+    interval = property(lambda self: self.__interval, __set_interval)
 
 
     def compute(self, base):
@@ -912,7 +994,7 @@ class Treatment(XMLiElement):
             return 0
 
         if self.rate_type == RATE_TYPE_FIXED:
-            if not self.interval or base < self.interval.lower:
+            if not self.interval or base >= self.interval.lower:
                 return self.rate
             else:
                 return 0

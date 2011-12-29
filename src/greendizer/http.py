@@ -6,6 +6,7 @@ import zlib
 from datetime import datetime, date
 from gzip import GzipFile
 from StringIO import StringIO
+import greendizer
 from greendizer.base import (is_empty_or_none, timestamp_to_datetime,
                              datetime_to_timestamp)
 
@@ -301,7 +302,8 @@ class Response(object):
         try:
             return simplejson.loads(self.__data)
         except:
-            return
+            if greendizer.DEBUG:
+                print self.__data
 
 
 

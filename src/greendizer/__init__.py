@@ -4,6 +4,12 @@ from greendizer.resources.sellers import Seller
 
 
 
+
+DEBUG = False
+
+
+
+
 class Client(object):
     '''
     Represents a Greendizer API client

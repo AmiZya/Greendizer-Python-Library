@@ -1061,12 +1061,12 @@ class Tax(Treatment):
         return super(Tax, self).to_xml("tax")
 
 
-    def to_string(self):
+    def to_string(self, **kwargs):
         '''
         Returns a string representation of the tax.
         @return: str
         '''
-        return super(Tax, self).to_string("tax")
+        return super(Tax, self).to_string("tax", **kwargs)
 
 
 
@@ -1092,10 +1092,10 @@ class Discount(Treatment):
         return super(Discount, self).to_xml("discount")
 
 
-    def to_string(self):
+    def to_string(self, **kwargs):
         '''
         Returns a string representation of the discount.
         @return: str
         '''
-        return super(Discount, self).to_string("discount")
+        return super(Discount, self).to_string("discount", **kwargs)
 

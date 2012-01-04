@@ -178,16 +178,16 @@ class Request(object):
             if self.__content_type == "application/x-www-form-urlencoded":
                 encoded_data = unicode(urllib.urlencode(self.data))
             else:
-                if greendizer.DEBUG and USE_GZIP:
+                if not greendizer.DEBUG and USE_GZIP:
                     #Compress to GZip
                     headers["Content-Encoding"] = COMPRESSION_GZIP
                     bf = StringIO('')
                     f = GzipFile(fileobj=bf, mode='wb', compresslevel=9)
-                    f.write(self.data.encode("utf8"))
+                    f.write(self.data.encode("utf-8"))
                     f.close()
                     encoded_data = bf.getvalue()
                 else:
-                    encoded_data = self.data.encode("utf8")
+                    encoded_data = self.data.encode("utf-8")
 
         request = Request.HttpRequest(API_ROOT + self.uri, data=encoded_data,
                                       method=method, headers=headers)

@@ -162,8 +162,9 @@ class Request(object):
         headers = self.__serialize_headers()
         headers.update({
             "Accept": "application/json",
-            "User-Agent": "Greendizer Python Library/1.0",
-            "Accept-Encoding": "gzip, deflate"
+            "User-Agent": "Greendizer Pyzer Library/1.0",
+            "Accept-Encoding": "gzip, deflate",
+            "Cache-Control": "no-cache"
         })
 
         method = self.method
@@ -173,30 +174,32 @@ class Request(object):
 
         encoded_data = None
         if method in ["POST", "PATCH", "PUT"] and self.data:
-            headers["Content-Type"] = self.__content_type
+            headers["Content-Type"] = self.__content_type + "; charset=utf-8"
             if self.__content_type == "application/x-www-form-urlencoded":
-                encoded_data = urllib.urlencode(self.data)
+                encoded_data = unicode(urllib.urlencode(self.data))
             else:
-                if USE_GZIP:
+                if greendizer.DEBUG and USE_GZIP:
                     #Compress to GZip
                     headers["Content-Encoding"] = COMPRESSION_GZIP
                     bf = StringIO('')
                     f = GzipFile(fileobj=bf, mode='wb', compresslevel=9)
-                    f.write(self.data)
+                    f.write(self.data.encode("utf8"))
                     f.close()
                     encoded_data = bf.getvalue()
                 else:
-                    encoded_data = self.data
+                    encoded_data = self.data.encode("utf8")
 
         request = Request.HttpRequest(API_ROOT + self.uri, data=encoded_data,
                                       method=method, headers=headers)
 
         try:
             response = urllib2.urlopen(request)
-            return Response(self, 200, response.read(), response.info())
+            return Response(self, 200, response.read().decode("utf-8"),
+                            response.info())
 
         except(urllib2.HTTPError), e:
-            instance = Response(self, e.code, e.read(), e.info())
+            instance = Response(self, e.code, e.read().decode("utf-8"),
+                                e.info())
             if e.code not in [201, 202, 204, 206, 304, 408, 416]:
                 raise ApiException(instance)
 

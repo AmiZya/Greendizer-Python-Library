@@ -7,7 +7,7 @@ from greendizer.base import is_empty_or_none, is_valid_email
 INFINITY = float('infinity')
 MAX_LENGTH = 100
 VERSION = "gd-xmli-1.1"
-AGENT = "Greendizer Pyzer Lib/1.0"
+AGENT = "Greendizer Pyzer Lib 1.0"
 CURRENCIES = ['AED', 'ALL', 'ANG', 'ARS', 'AUD', 'AWG', 'BBD', 'BDT', 'BGN',
               'BHD', 'BIF', 'BMD', 'BND', 'BOB', 'BRL', 'BTN', 'BWP', 'BYR',
               'BZD', 'CAD', 'CHF', 'CLP', 'CNY', 'COP', 'CRC', 'CUP', 'CVE',
@@ -122,13 +122,14 @@ class XMLiElement(object):
         raise NotImplementedError()
 
 
-    def to_string(self, indent="", newl=""):
+    def to_string(self, indent="", newl="", addindent=""):
         '''
         Returns a string representation of the XMLi element.
         @return: str
         '''
         buf = StringIO()
-        self.to_xml().writexml(buf, indent="", addindent=indent, newl=newl)
+        self.to_xml().writexml(buf, indent=indent, addindent=addindent,
+                               newl=newl)
         return buf.getvalue()
 
 
@@ -139,6 +140,13 @@ class XMLiElement(object):
         '''
         return self.to_string()
 
+
+    def __unicode__(self):
+        '''
+        Returns a unicode string representation of the XMLi element.
+        @return: unicode
+        '''
+        return self.to_string().encode("utf-8")
 
 
 
@@ -445,14 +453,17 @@ class XMLiBuilder(object):
         return doc
 
 
-    def to_string(self):
+    def to_string(self, indent="", addindent="", newl=""):
         '''
         Returns a string representation of the XMLi element.
         @return: str
         '''
-        buf = StringIO()
-        self.to_xml().writexml(buf, encoding="UTF-8")
-        return buf.getvalue()
+        buf = StringIO(u'')
+        self.to_xml().writexml(buf, indent=indent, addindent=addindent,
+                               newl=newl, encoding="UTF-8")
+        serialized = buf.getvalue()
+        buf.close()
+        return serialized
 
 
     def __str__(self):
@@ -461,6 +472,14 @@ class XMLiBuilder(object):
         @return: str
         '''
         return self.to_string()
+
+
+    def __unicode__(self):
+        '''
+        Returns a unicode string representation of the XMLi.
+        @return: unicode
+        '''
+        return self.to_string().encode("utf-8")
 
 
 

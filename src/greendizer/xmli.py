@@ -180,7 +180,7 @@ class ExtensibleXMLiElement(XMLiElement):
         @return: dict
         '''
         if not XML_NAMESPACE_PATTERN.match(namespace):
-            raise ValueError('Invalid name space format ' \
+            raise ValueError('Invalid namespace format. Use ' \
                              'myprefix:http://www.example.com''')
 
         if namespace not in self.__custom_elements:
@@ -271,6 +271,14 @@ class Interval(object):
         @return: str
         '''
         return self.to_string()
+
+
+    def __unicode__(self):
+        '''
+        Returns a unicode string representation of the interval
+        @return: unicode
+        '''
+        return self.to_string().encode("utf-8")
 
 
 
@@ -502,7 +510,7 @@ class Invoice(ExtensibleXMLiElement):
 
 
     def __init__(self, name=None, description=None, currency=None,
-                 status="paid", date=date.today(), due_date=None,
+                 status=INVOICE_PAID, date=date.today(), due_date=None,
                  custom_id=None, terms=None, buyer=Contact(),
                  shipping=Shipping()):
         '''

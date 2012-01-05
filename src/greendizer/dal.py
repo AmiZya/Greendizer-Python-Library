@@ -288,7 +288,7 @@ class Resource(object):
             request["If-Unmodified-Since"] = self.etag.last_modified
 
         response = request.get_response()
-        if response.status_code == 408: #Conflict
+        if response.status_code == 409: #Conflict
             raise ResourceConflictException(self, "PATCH")
 
         if response.status_code == 204: #No-Content
@@ -313,7 +313,7 @@ class Resource(object):
             request["If-Unmodified-Since"] = self.etag.last_modified
 
         response = request.get_response()
-        if response.status_code == 408: #Conflict
+        if response.status_code == 409: #Conflict
             raise ResourceConflictException(self, "DELETE")
 
         if response.status_code == 204: #No-Content

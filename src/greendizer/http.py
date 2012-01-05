@@ -17,6 +17,9 @@ COMPRESSION_DEFLATE = "deflate"
 COMPRESSION_GZIP = "gzip"
 API_ROOT = "https://api.greendizer.com/"
 USE_GZIP = True
+HTTP_METHODS = ["head", "get", "post", "put", "patch", "delete", "options"]
+CONTENT_TYPES = ["application/xml", "application/x-www-form-urlencoded"]
+
 
 
 
@@ -91,13 +94,11 @@ class Request(object):
             raise ValueError("Invalid URI.")
 
         if (is_empty_or_none(method)
-            or method.lower() not in ["head", "get", "post", "put", "patch",
-                                      "delete", "options"]):
+            or method.lower() not in HTTP_METHODS):
             raise ValueError("Invalid HTTP method.")
 
         if (is_empty_or_none(content_type)
-            or content_type not in ["application/xml",
-                                    "application/x-www-form-urlencoded"]):
+            or content_type not in CONTENT_TYPES):
             raise ValueError("Invalid content type value.")
 
         if not data and method.lower() in ["post", "put", "patch"]:
@@ -200,7 +201,7 @@ class Request(object):
         except(urllib2.HTTPError), e:
             instance = Response(self, e.code, e.read().decode("utf-8"),
                                 e.info())
-            if e.code not in [201, 202, 204, 206, 304, 408, 416]:
+            if e.code not in [201, 202, 204, 206, 304, 409, 416]:
                 raise ApiException(instance)
 
             return instance

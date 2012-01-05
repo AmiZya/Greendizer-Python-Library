@@ -9,6 +9,13 @@ from greendizer.resources import (User, EmailBase, InvoiceBase, ThreadBase,
                                   ThreadNodeBase, MessageNodeBase)
 
 
+
+
+SIGNATURE_KEY_INFO_XML = "<KeyInfo>Greendizer</KeyInfo>"
+
+
+
+
 class Seller(User):
     '''
     Represents a seller user
@@ -132,7 +139,7 @@ class InvoiceNode(InvoiceNodeBase):
         return self.search(query="location==0")
 
 
-    def send(self, xmli):
+    def send(self, xmli, signature=True):
         '''
         Sends an invoice
         @param xmli:str Invoice XML representation.
@@ -142,10 +149,36 @@ class InvoiceNode(InvoiceNodeBase):
         if is_empty_or_none(xmli):
             raise ValueError("Invalid XMLi")
 
-        # TODO: Enable for Python 2.6+
-#        import os
-#        if sys.getsizeof(xmli) > 500 * 1024:
-#            raise ValueError("XMLi's size is limited to 500kb.")
+        if signature and self.email.client.private_key:
+            import xmldsig
+            try:
+                from Crypto.PublicKey import RSA
+                from Crypto import Random
+            except ImportError:
+                raise ImportError('Pycrypto module is required to enable ' \
+                                  'XMLi signing. Please visit:\n' \
+                                  'http://pycrypto.sourceforge.net/')
+
+            rsa_private = RSA.importKey(self.email.client.private_key)
+            rgn = Random.new().read
+            xmli = xmldsig.sign(xmli, lambda x: rsa_private.sign(x, rgn)[0],
+                                SIGNATURE_KEY_INFO_XML, 1024)
+
+            #TODO: Remove this testing section 
+#            import os.path
+#            content = open(os.path.expanduser("Public Key Path here")).read()
+#            rsa_public = RSA.importKey(content)
+#            rgn = Random.new().read
+#            print xmldsig.verify(xmli, lambda x: rsa_public.encrypt(x, rgn)[0],
+#                                 1024)
+
+        try:
+            # 'getsizeof' method is only available for Python 2.6 and higher.
+            from os import sys
+            if sys.getsizeof(xmli) > 500 * 1024:
+                raise ValueError("XMLi's size is limited to 500kb.")
+        except AttributeError:
+            pass
 
         request = Request(self.email.client, method="POST",
                           content_type="application/xml", uri=self._uri,

@@ -1,3 +1,4 @@
+import os.path
 import base64
 from greendizer.resources.buyers import Buyer
 from greendizer.resources.sellers import Seller
@@ -107,8 +108,19 @@ class SellerClient(Client):
         '''
         Initializes a new instance of the SellerClient class
         '''
+        self.__private_key = None
         super(SellerClient, self).__init__(Seller(self), oauth_token, email,
                                            password)
+
+
+    @property
+    def private_key(self):
+        '''
+        Gets the private key that will be used to sign the XMLi sent from
+        this computer.
+        @return: str
+        '''
+        return self.__private_key
 
 
     @property
@@ -119,3 +131,13 @@ class SellerClient(Client):
         '''
         return self.user
 
+
+    def import_private_key(self, path):
+        '''
+        Imports a private key from a file.
+        @param key:str Key value
+        @param path:str Key file path
+        '''
+        f = open(os.path.expanduser(path), mode="rb")
+        self.__private_key = f.read()
+        f.close()

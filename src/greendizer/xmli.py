@@ -112,7 +112,7 @@ class XMLiElement(object):
             value = datetime_to_string(value)
 
         if isinstance(value, Decimal):
-            value = "0" if not value else str(value).rstrip('0')
+            value = "0" if not value else str(value).rstrip('.0')
 
         tag = root.ownerDocument.createElement(name)
         if cdata:

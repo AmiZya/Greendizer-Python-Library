@@ -142,6 +142,7 @@ class InvoiceNode(InvoiceNodeBase):
         if is_empty_or_none(xmli):
             raise ValueError("Invalid XMLi")
 
+        # TODO: Enable for Python 2.6+
 #        import os
 #        if sys.getsizeof(xmli) > 500 * 1024:
 #            raise ValueError("XMLi's size is limited to 500kb.")
@@ -151,8 +152,8 @@ class InvoiceNode(InvoiceNodeBase):
                           data=xmli)
 
         response = request.get_response()
-        if response.get_status_code() == 202: #Accepted
-            return InvoiceReport(self.client,
+        if response.status_code == 202: #Accepted
+            return InvoiceReport(self.email,
                                  extract_id_from_uri(response["Location"]))
 
 

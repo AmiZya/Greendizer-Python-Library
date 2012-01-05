@@ -4,12 +4,22 @@ from datetime import datetime, timedelta
 
 
 
+
 ## {{{ http://code.activestate.com/recipes/65215/ (r5)
+EMAIL_PATTERN = re.compile('^.+\\@(\\[?)[a-zA-Z0-9\\-\\.]' \
+                           '+\\.([a-zA-Z]{2,3}|[0-9]{1,3})(\\]?)$')
+
+
+
+
 def is_valid_email(s):
-    return (s and len(s) > 7 and
-            re.match('''^.+\\@(\\[?)[a-zA-Z0-9\\-\\.]+\\.([a-zA-Z]{2,3}|[0-9]
-                    {1,3})(\\]?)$''', s))
-## end of http://code.activestate.com/recipes/65215/ }}}
+    '''
+    Returns a value indicating whether the submitted string is a valid
+    email address.
+    @param s:str Email
+    @return: bool
+    '''
+    return (s and len(s) > 7 and EMAIL_PATTERN.match(s))
 
 
 

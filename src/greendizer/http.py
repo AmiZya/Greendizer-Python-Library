@@ -149,6 +149,8 @@ class Request(object):
         for header, value in self.headers.items():
             if isinstance(value, datetime) or isinstance(value, date):
                 serialized[header] = value.isoformat()
+            elif getattr(value, '__iter__', False): #is iterable
+                serialized[header] = ';'.join([str(i) for i in value])
             else:
                 serialized[header] = str(value)
 

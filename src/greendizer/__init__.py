@@ -135,7 +135,6 @@ class SellerClient(Client):
     def import_private_key(self, path):
         '''
         Imports a private key from a file.
-        @param key:str Key value
         @param path:str Key file path
         '''
         f = open(os.path.expanduser(path), mode="rb")

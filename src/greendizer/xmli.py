@@ -1,7 +1,7 @@
 from xml.dom.minidom import Document
 from StringIO import StringIO
 from datetime import datetime, date
-from decimal import Decimal, Context, ROUND_UP
+from decimal import Decimal
 from greendizer.base import is_empty_or_none, is_valid_email
 
 

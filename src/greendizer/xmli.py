@@ -8,6 +8,7 @@ from greendizer.base import is_empty_or_none, is_valid_email
 
 
 INFINITY = Decimal('infinity')
+ZERO = Decimal("0")
 SIGNIFICANCE_EXPONENT = Decimal(10) ** -5 #0.00001
 MAX_LENGTH = 100
 VERSION = "gd-xmli-1.1"
@@ -109,7 +110,7 @@ class XMLiElement(object):
             value = datetime_to_string(value)
 
         if isinstance(value, Decimal):
-            value = str(value).rstrip('0')
+            value = "0" if not value else str(value).rstrip('0')
 
         tag = root.ownerDocument.createElement(name)
         if cdata:
@@ -599,8 +600,8 @@ class Invoice(ExtensibleXMLiElement):
         Gets the total amount of discounts of the invoice.
         @return: Decimal
         '''
-        return (sum([group.total_discounts for group in self.__groups])
-                .quantize(SIGNIFICANCE_EXPONENT))
+        return (Decimal(sum([group.total_discounts for group in self.__groups])
+                .quantize(SIGNIFICANCE_EXPONENT)))
 
 
     @property
@@ -609,8 +610,8 @@ class Invoice(ExtensibleXMLiElement):
         Gets the total amount of taxes of the invoice.
         @return: Decimal
         '''
-        return (sum([group.total_taxes for group in self.__groups])
-                .quantize(SIGNIFICANCE_EXPONENT))
+        return (Decimal(sum([group.total_taxes for group in self.__groups])
+                .quantize(SIGNIFICANCE_EXPONENT)))
 
 
     @property
@@ -619,8 +620,8 @@ class Invoice(ExtensibleXMLiElement):
         Gets the total of the invoice.
         @return: Decimal
         '''
-        return (sum([group.total for group in self.__groups])
-                .quantize(SIGNIFICANCE_EXPONENT))
+        return (Decimal(sum([group.total for group in self.__groups])
+                .quantize(SIGNIFICANCE_EXPONENT)))
 
 
     name = property(lambda self: self.__name, __set_name)
@@ -718,8 +719,8 @@ class Group(ExtensibleXMLiElement):
         Gets the total amount of discounts of the group.
         @return: Decimal
         '''
-        return (sum([line.total_discounts for line in self.__lines])
-                .quantize(SIGNIFICANCE_EXPONENT))
+        return Decimal((sum([line.total_discounts for line in self.__lines])
+                .quantize(SIGNIFICANCE_EXPONENT)))
 
 
     @property
@@ -728,8 +729,8 @@ class Group(ExtensibleXMLiElement):
         Gets the total amount of taxes of the group.
         @return: Decimal
         '''
-        return (sum([line.total_taxes for line in self.__lines])
-                .quantize(SIGNIFICANCE_EXPONENT))
+        return (Decimal(sum([line.total_taxes for line in self.__lines])
+                .quantize(SIGNIFICANCE_EXPONENT)))
 
 
     @property
@@ -738,7 +739,7 @@ class Group(ExtensibleXMLiElement):
         Gets the total of the group.
         @return: Decimal
         '''
-        return (sum([line.total for line in self.__lines])
+        return (Decimal(sum([line.total for line in self.__lines]))
                 .quantize(SIGNIFICANCE_EXPONENT))
 
 
@@ -875,8 +876,8 @@ class Line(ExtensibleXMLiElement):
         Gets the total amount of discounts applied to the current line.
         @return: Decimal
         '''
-        return (sum([ d.compute(self.gross) for d in self.__discounts ])
-                .quantize(SIGNIFICANCE_EXPONENT))
+        return (Decimal(sum([ d.compute(self.gross) for d in self.__discounts ])
+                .quantize(SIGNIFICANCE_EXPONENT)))
 
 
     @property
@@ -886,8 +887,8 @@ class Line(ExtensibleXMLiElement):
         @return: Decimal
         '''
         base = self.gross - self.total_discounts
-        return (sum([ t.compute(base) for t in self.__taxes ])
-                .quantize(SIGNIFICANCE_EXPONENT))
+        return (Decimal(sum([ t.compute(base) for t in self.__taxes ])
+                .quantize(SIGNIFICANCE_EXPONENT)))
 
 
     @property
@@ -896,8 +897,8 @@ class Line(ExtensibleXMLiElement):
         Gets the total of the line.
         @return: Decimal
         '''
-        return ((self.gross + self.total_taxes - self.total_discounts)
-                .quantize(SIGNIFICANCE_EXPONENT))
+        return (Decimal((self.gross + self.total_taxes - self.total_discounts)
+                .quantize(SIGNIFICANCE_EXPONENT)))
 
 
     name = property(lambda self: self.__name, __set_name)
@@ -1025,14 +1026,14 @@ class Treatment(XMLiElement):
         @param base:float Gross
         @return: Decimal
         '''
-        if base <= 0:
-            return 0
+        if base <= ZERO:
+            return ZERO
 
         if self.rate_type == RATE_TYPE_FIXED:
             if not self.interval or base >= self.interval.lower:
                 return self.rate.quantize(SIGNIFICANCE_EXPONENT)
             else:
-                return 0
+                return ZERO
 
         if not self.interval:
             return (base * self.rate / 100).quantize(SIGNIFICANCE_EXPONENT)
@@ -1041,7 +1042,7 @@ class Treatment(XMLiElement):
             return ((min(base, self.interval.upper) - self.interval.lower)
                     * self.rate / 100).quantize(SIGNIFICANCE_EXPONENT)
 
-        return 0
+        return ZERO
 
 
     def to_xml(self, name):

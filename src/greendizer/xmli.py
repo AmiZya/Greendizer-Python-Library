@@ -1,3 +1,4 @@
+import re
 from xml.dom.minidom import Document
 from StringIO import StringIO
 from datetime import datetime, date
@@ -6,7 +7,8 @@ from greendizer.base import is_empty_or_none, is_valid_email
 
 
 
-
+XML_NAMESPACE_PATTERN = re.compile(r'^(?P<prefix>\w+):' \
+                                   '(?P<uri>http(?:s)?:\/\/[a-z.-_]+)$')
 INFINITY = Decimal('infinity')
 ZERO = Decimal("0")
 SIGNIFICANCE_EXPONENT = Decimal(10) ** -5 #0.00001
@@ -177,9 +179,9 @@ class ExtensibleXMLiElement(XMLiElement):
         @param namespace:XMLNamespace
         @return: dict
         '''
-        if ':' not in namespace:
-            raise ValueError('''Invalid name space format 
-                             myprefix:http://www.example.com''')
+        if not XML_NAMESPACE_PATTERN.match(namespace):
+            raise ValueError('Invalid name space format ' \
+                             'myprefix:http://www.example.com''')
 
         if namespace not in self.__custom_elements:
             self.__custom_elements[namespace] = {}

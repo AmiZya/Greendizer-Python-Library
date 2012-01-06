@@ -6,10 +6,12 @@ from decimal import Decimal, ROUND_DOWN
 from greendizer.base import is_empty_or_none, is_valid_email
 
 
+
+
 XML_NAMESPACE_PATTERN = re.compile(r'^(?P<prefix>\w+):' \
                                    '(?P<uri>http(?:s)?:\/\/[a-z.-_]+)$')
-INFINITY = float('inf')
-ZERO = float(0)
+INFINITY = Decimal('inf')
+ZERO = Decimal(0)
 SIGNIFICANCE_EXPONENT = Decimal(10) ** -5 #0.00001
 MAX_LENGTH = 100
 VERSION = "gd-xmli-1.1"
@@ -110,7 +112,7 @@ class XMLiElement(object):
         if isinstance(value, datetime):
             value = datetime_to_string(value)
 
-        if isinstance(value, float):
+        if isinstance(value, Decimal):
             value = "0" if not value else repr(value).rstrip('.0')
 
         tag = root.ownerDocument.createElement(name)
@@ -236,14 +238,14 @@ class Interval(object):
     '''
     Represents an line treatment base interval
     '''
-    def __init__(self, lower=0.0, upper=INFINITY):
+    def __init__(self, lower=0, upper=INFINITY):
         '''
         Initializes a new instance of the Interval class.
         @param lower:float Lower limit
         @param upper:flaot Upper limit
         '''
-        self.lower = lower
-        self.upper = upper
+        self.lower = Decimal(str(lower))
+        self.upper = Decimal(str(upper))
 
 
     @property
@@ -627,7 +629,7 @@ class Invoice(ExtensibleXMLiElement):
         Gets the total of the invoice.
         @return: Decimal
         '''
-        return (Decimal(repr(sum([group.total for group in self.__groups])))
+        return ((sum([group.total for group in self.__groups]) or Decimal(0))
                 .quantize(SIGNIFICANCE_EXPONENT, rounding=ROUND_DOWN))
 
 
@@ -852,7 +854,7 @@ class Line(ExtensibleXMLiElement):
             if value < 0:
                 raise ValueError()
 
-            self.__quantity = value
+            self.__quantity = Decimal(str(value))
         except ValueError:
             raise ValueError("Quantity must be a positive number")
 
@@ -866,7 +868,7 @@ class Line(ExtensibleXMLiElement):
             if value < 0:
                 raise ValueError()
 
-            self.__unit_price = value
+            self.__unit_price = Decimal(str(value))
         except ValueError:
             raise ValueError("Unit Price must be a positive number")
 
@@ -1021,7 +1023,7 @@ class Treatment(XMLiElement):
         @param value:float
         '''
         try:
-            self.__rate = value
+            self.__rate = Decimal(str(value))
         except:
             raise ValueError("invalid rate value.")
 

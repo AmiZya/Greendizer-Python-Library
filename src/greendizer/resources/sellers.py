@@ -158,14 +158,6 @@ class InvoiceNode(InvoiceNodeBase):
             xmli = xmldsig.sign(xmli, lambda x: rsa_private.sign(x, rgn)[0],
                                 '', 1024)
 
-            #TODO: Remove this testing section 
-#            import os.path
-#            content = open(os.path.expanduser("~/Greendizer/pubkey.pem")).read()
-#            rsa_public = RSA.importKey(content)
-#            rgn = Random.new().read
-#            print xmldsig.verify(xmli, lambda x: rsa_public.encrypt(x, rgn)[0],
-#                                 1024)
-
         try:
             # 'getsizeof' method is only available for Python 2.6 and higher.
             from os import sys

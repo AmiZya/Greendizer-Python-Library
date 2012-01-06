@@ -850,9 +850,12 @@ class Line(ExtensibleXMLiElement):
         @param value:str
         '''
         try:
+            if value < 0:
+                raise ValueError()
+
             self.__quantity = Decimal(str(value))
         except ValueError:
-            raise ValueError("Quantity must be a number")
+            raise ValueError("Quantity must be a positive number")
 
 
     def __set_unit_price(self, value):
@@ -861,9 +864,12 @@ class Line(ExtensibleXMLiElement):
         @param value:str
         '''
         try:
+            if value < 0:
+                raise ValueError()
+
             self.__unit_price = Decimal(str(value))
         except ValueError:
-            raise ValueError("Unit Price must be a number")
+            raise ValueError("Unit Price must be a positive number")
 
 
     @property
@@ -881,7 +887,8 @@ class Line(ExtensibleXMLiElement):
         Gets the total amount of discounts applied to the current line.
         @return: Decimal
         '''
-        return Decimal(sum([ d.compute(self.gross) for d in self.__discounts ]))
+        return min(self.gross, Decimal(sum([ d.compute(self.gross)
+                                            for d in self.__discounts ])))
 
 
     @property
@@ -900,6 +907,10 @@ class Line(ExtensibleXMLiElement):
         Gets the total of the line.
         @return: Decimal
         '''
+#        print "%s: gross=%s & discouts=%s & taxes=%s" % (self.name,
+#                                                         self.gross,
+#                                                         self.total_discounts,
+#                                                         self.total_taxes)
         return Decimal(self.gross + self.total_taxes - self.total_discounts)
 
 
@@ -932,17 +943,17 @@ class Line(ExtensibleXMLiElement):
         self._create_text_node(root, "gtin", self.gtin)
         self._create_text_node(root, "sscc", self.sscc)
 
-        if len(self.__taxes):
-            taxes = root.ownerDocument.createElement("taxes")
-            root.appendChild(taxes)
-            for tax in self.__taxes:
-                taxes.appendChild(tax.to_xml())
-
         if len(self.__discounts):
             discounts = root.ownerDocument.createElement("discounts")
             root.appendChild(discounts)
             for discount in self.__discounts:
                 discounts.appendChild(discount.to_xml())
+
+        if len(self.__taxes):
+            taxes = root.ownerDocument.createElement("taxes")
+            root.appendChild(taxes)
+            for tax in self.__taxes:
+                taxes.appendChild(tax.to_xml())
 
         super(Line, self).to_xml(root)
 

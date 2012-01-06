@@ -174,7 +174,8 @@ class InvoiceNode(InvoiceNodeBase):
             size = len(base64.encodestring(xmli)) #1 ASCII = 1 byte
 
         if size > MAX_CONTENT_LENGTH:
-            raise ValueError("XMLi's size is limited to 500kb.")
+            raise ValueError("XMLi's size is limited to %skb."
+                             % MAX_CONTENT_LENGTH / 1024)
 
         request = Request(self.email.client, method="POST", data=xmli,
                           uri=self._uri, content_type="application/xml")

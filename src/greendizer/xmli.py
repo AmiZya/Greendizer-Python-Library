@@ -113,7 +113,7 @@ class XMLiElement(object):
             value = datetime_to_string(value)
 
         if isinstance(value, Decimal):
-            value = "0" if not value else repr(value).rstrip('.0')
+            value = "0" if not value else str(value).rstrip('.0')
 
         tag = root.ownerDocument.createElement(name)
         if cdata:
@@ -908,10 +908,6 @@ class Line(ExtensibleXMLiElement):
         Gets the total of the line.
         @return: Decimal
         '''
-#        print "%s: gross=%s & discouts=%s & taxes=%s" % (self.name,
-#                                                         self.gross,
-#                                                         self.total_discounts,
-#                                                         self.total_taxes)
         return self.gross + self.total_taxes - self.total_discounts
 
 
@@ -929,7 +925,6 @@ class Line(ExtensibleXMLiElement):
         for n, v in { "name": self.name, "quantity": self.quantity,
                      "unit_price":self.unit_price }.items():
             if is_empty_or_none(v):
-                print "%s: %s" % (n, v)
                 raise ValueError("'%s' attribute cannot be empty or None." % n)
 
         doc = Document()

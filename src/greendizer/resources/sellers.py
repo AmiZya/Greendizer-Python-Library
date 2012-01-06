@@ -10,6 +10,11 @@ from greendizer.resources import (User, EmailBase, InvoiceBase, ThreadBase,
 
 
 
+MAX_CONTENT_LENGTH = 500 * 1024 #byte
+
+
+
+
 class Seller(User):
     '''
     Represents a seller user
@@ -155,20 +160,24 @@ class InvoiceNode(InvoiceNodeBase):
 
             rsa_private = RSA.importKey(self.email.client.private_key)
             rgn = Random.new().read
-            xmli = xmldsig.sign(xmli, lambda x: rsa_private.sign(x, rgn)[0],
-                                '', 1024)
+            xmli = xmldsig.sign(xmli, lambda x: rsa_private.sign(x, rgn)[0], '',
+                                1024)
 
+        size = 0
         try:
-            # 'getsizeof' method is only available for Python 2.6 and higher.
+            #2.6+
             from os import sys
-            if sys.getsizeof(xmli) > 500 * 1024:
-                raise ValueError("XMLi's size is limited to 500kb.")
+            size = sys.getsizeof(xmli)
         except AttributeError:
-            pass
+            #2.5
+            import base64
+            size = len(base64.encodestring(xmli)) #1 ASCII = 1 byte
 
-        request = Request(self.email.client, method="POST",
-                          content_type="application/xml", uri=self._uri,
-                          data=xmli)
+        if size > MAX_CONTENT_LENGTH:
+            raise ValueError("XMLi's size is limited to 500kb.")
+
+        request = Request(self.email.client, method="POST", data=xmli,
+                          uri=self._uri, content_type="application/xml")
 
         response = request.get_response()
         if response.status_code == 202: #Accepted

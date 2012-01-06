@@ -122,9 +122,10 @@ def sign(xml, f_private, key_info_xml, key_size, sig_id_value=None):
         'signature_id': signature_id,
     }
 
-    # insert xmldsig after first '>' in message
-    signed_xml = xml.replace('>', '>' + signature_xml, 1)
-    return signed_xml
+    # insert xmldsig before document closing tag
+    root_closing_tag = xml.rfind("</")
+    return  xml[:root_closing_tag] + signature_xml + xml[root_closing_tag:]
+
 
 
 def verify(xml, f_public, key_size):

@@ -10,11 +10,6 @@ from greendizer.resources import (User, EmailBase, InvoiceBase, ThreadBase,
 
 
 
-SIGNATURE_KEY_INFO_XML = "<KeyInfo>Greendizer</KeyInfo>"
-
-
-
-
 class Seller(User):
     '''
     Represents a seller user
@@ -161,11 +156,11 @@ class InvoiceNode(InvoiceNodeBase):
             rsa_private = RSA.importKey(self.email.client.private_key)
             rgn = Random.new().read
             xmli = xmldsig.sign(xmli, lambda x: rsa_private.sign(x, rgn)[0],
-                                SIGNATURE_KEY_INFO_XML, 1024)
+                                '', 1024)
 
             #TODO: Remove this testing section 
 #            import os.path
-#            content = open(os.path.expanduser("Public Key Path here")).read()
+#            content = open(os.path.expanduser("~/Greendizer/pubkey.pem")).read()
 #            rsa_public = RSA.importKey(content)
 #            rgn = Random.new().read
 #            print xmldsig.verify(xmli, lambda x: rsa_public.encrypt(x, rgn)[0],

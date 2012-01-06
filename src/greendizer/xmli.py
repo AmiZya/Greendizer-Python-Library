@@ -2,15 +2,14 @@ import re
 from xml.dom.minidom import Document
 from StringIO import StringIO
 from datetime import datetime, date
-from decimal import Decimal
+from decimal import Decimal, ROUND_DOWN
 from greendizer.base import is_empty_or_none, is_valid_email
-
 
 
 XML_NAMESPACE_PATTERN = re.compile(r'^(?P<prefix>\w+):' \
                                    '(?P<uri>http(?:s)?:\/\/[a-z.-_]+)$')
-INFINITY = Decimal('infinity')
-ZERO = Decimal("0")
+INFINITY = float('inf')
+ZERO = float(0)
 SIGNIFICANCE_EXPONENT = Decimal(10) ** -5 #0.00001
 MAX_LENGTH = 100
 VERSION = "gd-xmli-1.1"
@@ -111,8 +110,8 @@ class XMLiElement(object):
         if isinstance(value, datetime):
             value = datetime_to_string(value)
 
-        if isinstance(value, Decimal):
-            value = "0" if not value else str(value).rstrip('.0')
+        if isinstance(value, float):
+            value = "0" if not value else repr(value).rstrip('.0')
 
         tag = root.ownerDocument.createElement(name)
         if cdata:
@@ -243,8 +242,8 @@ class Interval(object):
         @param lower:float Lower limit
         @param upper:flaot Upper limit
         '''
-        self.lower = Decimal(str(lower))
-        self.upper = Decimal(str(upper))
+        self.lower = lower
+        self.upper = upper
 
 
     @property
@@ -610,7 +609,7 @@ class Invoice(ExtensibleXMLiElement):
         Gets the total amount of discounts of the invoice.
         @return: Decimal
         '''
-        return Decimal(sum([group.total_discounts for group in self.__groups]))
+        return sum([group.total_discounts for group in self.__groups])
 
 
     @property
@@ -619,7 +618,7 @@ class Invoice(ExtensibleXMLiElement):
         Gets the total amount of taxes of the invoice.
         @return: Decimal
         '''
-        return Decimal(sum([group.total_taxes for group in self.__groups]))
+        return sum([group.total_taxes for group in self.__groups])
 
 
     @property
@@ -628,8 +627,8 @@ class Invoice(ExtensibleXMLiElement):
         Gets the total of the invoice.
         @return: Decimal
         '''
-        return (Decimal(sum([group.total for group in self.__groups])
-                .quantize(SIGNIFICANCE_EXPONENT)))
+        return (Decimal(repr(sum([group.total for group in self.__groups])))
+                .quantize(SIGNIFICANCE_EXPONENT, rounding=ROUND_DOWN))
 
 
     name = property(lambda self: self.__name, __set_name)
@@ -727,7 +726,7 @@ class Group(ExtensibleXMLiElement):
         Gets the total amount of discounts of the group.
         @return: Decimal
         '''
-        return Decimal(sum([line.total_discounts for line in self.__lines]))
+        return sum([line.total_discounts for line in self.__lines])
 
 
     @property
@@ -736,7 +735,7 @@ class Group(ExtensibleXMLiElement):
         Gets the total amount of taxes of the group.
         @return: Decimal
         '''
-        return Decimal(sum([line.total_taxes for line in self.__lines]))
+        return sum([line.total_taxes for line in self.__lines])
 
 
     @property
@@ -745,7 +744,7 @@ class Group(ExtensibleXMLiElement):
         Gets the total of the group.
         @return: Decimal
         '''
-        return Decimal(sum([line.total for line in self.__lines]))
+        return sum([line.total for line in self.__lines])
 
 
     name = property(lambda self: self.__name, __set_name)
@@ -793,9 +792,9 @@ class Line(ExtensibleXMLiElement):
 
         self.name = name
         self.description = description
-        self.quantity = Decimal(str(quantity))
+        self.quantity = quantity
         self.date = date
-        self.unit_price = Decimal(str(unit_price))
+        self.unit_price = unit_price
         self.unit = unit
         self.gin = gin
         self.gtin = gtin
@@ -853,7 +852,7 @@ class Line(ExtensibleXMLiElement):
             if value < 0:
                 raise ValueError()
 
-            self.__quantity = Decimal(str(value))
+            self.__quantity = value
         except ValueError:
             raise ValueError("Quantity must be a positive number")
 
@@ -867,7 +866,7 @@ class Line(ExtensibleXMLiElement):
             if value < 0:
                 raise ValueError()
 
-            self.__unit_price = Decimal(str(value))
+            self.__unit_price = value
         except ValueError:
             raise ValueError("Unit Price must be a positive number")
 
@@ -887,8 +886,8 @@ class Line(ExtensibleXMLiElement):
         Gets the total amount of discounts applied to the current line.
         @return: Decimal
         '''
-        return min(self.gross, Decimal(sum([ d.compute(self.gross)
-                                            for d in self.__discounts ])))
+        return min(self.gross, sum([ d.compute(self.gross)
+                                    for d in self.__discounts ]))
 
 
     @property
@@ -898,7 +897,7 @@ class Line(ExtensibleXMLiElement):
         @return: Decimal
         '''
         base = self.gross - self.total_discounts
-        return Decimal(sum([ t.compute(base) for t in self.__taxes ]))
+        return sum([ t.compute(base) for t in self.__taxes ])
 
 
     @property
@@ -911,7 +910,7 @@ class Line(ExtensibleXMLiElement):
 #                                                         self.gross,
 #                                                         self.total_discounts,
 #                                                         self.total_taxes)
-        return Decimal(self.gross + self.total_taxes - self.total_discounts)
+        return self.gross + self.total_taxes - self.total_discounts
 
 
     name = property(lambda self: self.__name, __set_name)
@@ -1022,7 +1021,7 @@ class Treatment(XMLiElement):
         @param value:float
         '''
         try:
-            self.__rate = Decimal(str(value))
+            self.__rate = value
         except:
             raise ValueError("invalid rate value.")
 

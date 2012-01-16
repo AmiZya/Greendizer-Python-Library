@@ -71,7 +71,7 @@ class Resource(object):
     def __init__(self, client, identifier=None):
         '''
         Initializes a new instance of the Resource class.
-        @param container:Container Resource container
+        @param client:client Current client instance
         @param identifier:str ID of the resource
         '''
         self.__client = client

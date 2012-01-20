@@ -344,7 +344,7 @@ class InvoiceBase(Resource):
 
 
     @property
-    def secretKey(self):
+    def secret_key(self):
         '''
         Gets the secret key of the invoice.
         @return: str

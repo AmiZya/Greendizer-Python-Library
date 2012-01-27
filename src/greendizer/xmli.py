@@ -113,7 +113,7 @@ class XMLiElement(object):
             value = datetime_to_string(value)
 
         if isinstance(value, Decimal):
-            value = "0" if not value else str(value).rstrip('.0')
+            value = "0" if not value else str(value)
 
         tag = root.ownerDocument.createElement(name)
         if cdata:
@@ -462,12 +462,15 @@ class XMLiBuilder(object):
             raise Exception("Limited to %d invoices at a time." % MAX_LENGTH)
 
         doc = Document()
-        root = doc.createElement("invoices")
+        root = doc.createElement("xmli")
         root.setAttribute("version", VERSION)
         root.setAttribute("invoice-agent", AGENT)
         doc.appendChild(root)
+
+        content = doc.createElement("invoices")
+        root.appendChild(content)
         for invoice in self.__invoices:
-            root.appendChild(invoice.to_xml())
+            content.appendChild(invoice.to_xml())
 
         return doc
 
@@ -962,7 +965,7 @@ class Treatment(XMLiElement):
     '''
     Represents a line treatment.
     '''
-    def __init__(self, name=None, description="", rate_type=RATE_TYPE_FIXED,
+    def __init__(self, name=None, description=None, rate_type=RATE_TYPE_FIXED,
                  rate=0, interval=None):
         '''
         Initializes a new instance of the Treatment class.
@@ -1001,6 +1004,17 @@ class Treatment(XMLiElement):
         self.__name = value
 
 
+    def __set_description(self, value):
+        '''
+        Sets the name of the treatment.
+        @param value:str
+        '''
+        if not value or not len(value):
+            raise ValueError("Invalid description.")
+
+        self.__description = value
+
+
     def __set_rate_type(self, value):
         '''
         Sets the rate type.
@@ -1024,6 +1038,7 @@ class Treatment(XMLiElement):
 
 
     name = property(lambda self: self.__name, __set_name)
+    description = property(lambda self: self.__description, __set_description)
     rate_type = property(lambda self: self.__rate_type, __set_rate_type)
     interval = property(lambda self: self.__interval, __set_interval)
     rate = property(lambda self: self.__rate, __set_rate)
@@ -1059,7 +1074,10 @@ class Treatment(XMLiElement):
         Returns a DOM representation of the line treatment.
         @return: Element
         '''
-        for n, v in { "rate_type": self.rate_type, "rate": self.rate }.items():
+        for n, v in { "rate_type": self.rate_type,
+                     "rate": self.rate,
+                     "name": self.name,
+                     "description":self.description }.items():
             if is_empty_or_none(v):
                 raise ValueError("'%s' attribute cannot be empty or None." % n)
 

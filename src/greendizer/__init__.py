@@ -109,18 +109,22 @@ class SellerClient(Client):
         Initializes a new instance of the SellerClient class
         '''
         self.__private_key = None
+        self.__public_key = None
         super(SellerClient, self).__init__(Seller(self), oauth_token, email,
                                            password)
 
 
     @property
-    def private_key(self):
+    def keys(self):
         '''
         Gets the private key that will be used to sign the XMLi sent from
         this computer.
         @return: str
         '''
-        return self.__private_key
+        if self.__private_key and self.__public_key:
+            return (self.__private_key, self.__public_key)
+
+        return None, None
 
 
     @property
@@ -132,11 +136,21 @@ class SellerClient(Client):
         return self.user
 
 
-    def import_private_key(self, path):
+    def import_keys(self, private, public, passphrase=None):
         '''
-        Imports a private key from a file.
-        @param path:str Key file path
+        Imports the private and public keys that will be used to sign
+        invoices.
+        @param private:file File-like object or stream
+        @param public:file File-like object or stream
+        @param passphrase:str Optional pass phrase to decrypt the private key.
         '''
-        f = open(os.path.expanduser(path), mode="rb")
-        self.__private_key = f.read()
-        f.close()
+        try:
+            from Crypto.PublicKey import RSA
+        except ImportError:
+            raise ImportError('PyCrypto 2.5 module is required to enable ' \
+                              'XMLi signing. Please visit:\n' \
+                              'http://pycrypto.sourceforge.net/')
+
+        self.__private_key = RSA.importKey(private.read(),
+                                           passphrase=passphrase)
+        self.__public_key = RSA.importKey(public.read())

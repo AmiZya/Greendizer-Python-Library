@@ -1,4 +1,5 @@
-import hashlib
+import binascii
+import struct
 from datetime import timedelta
 from greendizer.base import Address, is_empty_or_none, extract_id_from_uri
 from greendizer.http import Request
@@ -148,29 +149,20 @@ class InvoiceNode(InvoiceNodeBase):
         if is_empty_or_none(xmli):
             raise ValueError("Invalid XMLi")
 
-        if signature and self.email.client.private_key:
-            import xmldsig
-            try:
-                from Crypto.PublicKey import RSA
-                from Crypto import Random
-            except ImportError:
-                raise ImportError('Pycrypto module is required to enable ' \
-                                  'XMLi signing. Please visit:\n' \
-                                  'http://pycrypto.sourceforge.net/')
-
-            rsa_private = RSA.importKey(self.email.client.private_key)
-            rgn = Random.new().read
-            xmli = xmldsig.sign(xmli, lambda x: rsa_private.sign(x, rgn)[0], '',
-                                1024)
+        '''
+        XMLdsig: required PyCrypto + lxml
+        '''
+        private_key, public_key = self.email.client.keys
+        if signature and private_key and public_key:
+            from greendizer import xmldsig
+            xmli = xmldsig.sign(xmli, private_key, public_key)
 
         size = 0
         try:
-            #2.6+
             from os import sys
             size = sys.getsizeof(xmli)
         except AttributeError:
-            #2.5
-            import base64
+            import base64 #2.5 and older...
             size = len(base64.encodestring(xmli)) #1 ASCII = 1 byte
 
         if size > MAX_CONTENT_LENGTH:

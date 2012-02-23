@@ -68,14 +68,14 @@ class Resource(object):
     '''
     Represents a generic resource
     '''
-    def __init__(self, client, identifier=None):
+    def __init__(self, client, identifier='0'):
         '''
         Initializes a new instance of the Resource class.
         @param client:client Current client instance
         @param identifier:str ID of the resource
         '''
         self.__client = client
-        self.__id = identifier or "0"
+        self.__id = identifier
         self.__last_modified = datetime(1970, 1, 1)
         self.__raw_data = {}
         self.__raw_updates = {}

@@ -9,7 +9,7 @@ Check out [the Greendizer website](https://www.greendizer.com/) for more informa
 #About the library
 The library exposes the resources of the Greendizer API in a simple yet powerful way. It allows developers to create applications for Greendizer quickly and efficiently. For a detailed documentation about how to use it, you can check out our [Libraries Cookbook](https://www.greendizer.com/docs/libraries/).
 
-We also offer a number of other libraries in [other popular programming languages](https://www.greendizer.com/docs/libraries/downloads/) of our website.
+We also offer a number of other libraries in [other popular programming languages](https://www.greendizer.com/docs/libraries/downloads/) on our website.
 
 #Issues tracking
 Before posting any issues of bug reports, make sure that your problem relates to the library and not the Greendizer API. Issues related to the API should be reported [here](http://code.google.com/p/greendizer-api/).

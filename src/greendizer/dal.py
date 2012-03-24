@@ -354,10 +354,11 @@ class Collection(object):
     def __getitem__(self, identifier):
         '''
         Gets a resource inside the collection by its ID or None.
-        @param identifier:ID of the resource.
+        @param identifier:ID of the resource or index in the list
         @return: Resource
         '''
-        return self.__resources.get(identifier, None)
+        return (self.__list[identifier] if type(identifier) is int
+                else self.__resources.get(identifier, None))
 
 
     def __len__(self):

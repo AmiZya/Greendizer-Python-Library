@@ -693,7 +693,7 @@ class Group(ExtensibleXMLiElement):
     '''
     Represents a group of lines in the XMLi.
     '''
-    def __init__(self, name=None, description=""):
+    def __init__(self, name="", description=""):
         '''
         Initializes a new instance of the Group class.
         @param name:str Group name.
@@ -712,17 +712,6 @@ class Group(ExtensibleXMLiElement):
         @return: list
         '''
         return self.__lines
-
-
-    def __set_name(self, value):
-        '''
-        Sets the group's name.
-        @param value:str
-        '''
-        if not value or not len(value):
-            raise ValueError("Invalid group name.")
-
-        self.__name = value
 
 
     @property
@@ -752,9 +741,6 @@ class Group(ExtensibleXMLiElement):
         return sum([line.total for line in self.__lines])
 
 
-    name = property(lambda self: self.__name, __set_name)
-
-
     def to_xml(self):
         '''
         Returns a DOM representation of the group.
@@ -762,10 +748,6 @@ class Group(ExtensibleXMLiElement):
         '''
         if not len(self.lines):
             raise Exception("A group must at least have one line.")
-
-        for n, v in { "name": self.name }.items():
-            if is_empty_or_none(v):
-                raise ValueError("'%s' attribute cannot be empty or None." % n)
 
         doc = Document()
         root = doc.createElement("group")
